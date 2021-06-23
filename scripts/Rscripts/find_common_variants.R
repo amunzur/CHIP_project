@@ -43,6 +43,24 @@ identify_vcf_files <- function(sample_type, sample_list){
 	return(as.list(sort(unlist(vcf_list))))
 }
 
+load_vcf_from_list <- function(vcf_paths_list) {
+
+	# super simple function that loads the relevant vcf files given a list of paths, and saves them in a list as dataframes
+	vcf_list <- list()
+
+	for (vcf_path in vcf_paths_list){
+
+		vcf_file <- read.delim(vcf_path, sep = "\t")
+		vcf_file <- grep("^[^#]", vcf_file) # remove all lines that start with #, essentially the header
+
+		vcf_list <- append(vcf_list, vcf_file)
+
+	} # end of for loop
+
+	return(vcf_list)
+
+}
+
 find_common_variants <- function(tumor_vcf, wbc_vcf)
 	# this function assumes that these files are the same length, and they have the same ids in the same location in both
 
