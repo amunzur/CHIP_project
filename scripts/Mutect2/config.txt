@@ -1,0 +1,40 @@
+# =============================================================================
+## PATHS TO PIPELINE SCRIPTS
+# =============================================================================
+script_dir="/groups/wyattgrp/users/amunzur/chip_project/scripts/Mutect2"
+
+# =============================================================================
+## PATHS TO SCRIPTS/BINARIES
+# =============================================================================
+
+samtools_path="/home/amunzur/anaconda3/envs/mito/bin/samtools"
+picard_path="/home/amunzur/anaconda3/envs/mito/bin/picard"
+bedtools_path="/groups/wyattgrp/bin/bedtools"
+vardict_java_path="/groups/wyattgrp/users/echen/software/VarDict-1.4.8/VarDict-1.4.8/bin/VarDict"
+vardict_script_dir="/groups/wyattgrp/software/vardict/VarDict"
+annovar_path="/groups/wyattgrp/software/annovar/annovar/table_annovar.pl"
+annovar_humandb="/groups/wyattgrp/software/annovar/annovar/humandb"
+
+# =============================================================================
+## PATHS TO REFERENCE FILES
+# =============================================================================
+
+backgrounderror="/groups/wyattgrp/reference/hg38/supp_files_fortnvstat/hg38_genepanel_allchr_errorrates.txt"
+targetbed="/groups/wyattgrp/reference/hg38/supp_files_fortnvstat/hg38genes4intersect.bed"
+gcbed="/groups/wyattgrp/reference/hg38/supp_files_fortnvstat/hg38.gc50Base.bed"
+ref="/groups/wyattgrp/reference/hg38/hg38.fa"
+
+# =============================================================================
+## CONDA VARIABLES
+# =============================================================================
+
+conda_profile_path="/home/$(whoami)/anaconda3/etc/profile.d/conda.sh"
+
+# =============================================================================
+## MISC
+# =============================================================================
+threads=60
+#min_depth variable tnvstat and downstream analysis will only include 
+#positions greater than $min_depth
+min_depth=30
+MIN_MAPQ=20
