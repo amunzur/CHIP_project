@@ -1,4 +1,13 @@
+ptm <- proc.time() # start timer
+noquote(format(Sys.time(), "%a %b %d %X %Y"))
+
+# make the log file and create a file connection to write to it.
+log_file_name <- paste0(length(list.files("/groups/wyattgrp/users/amunzur/log/")), ".log")
+file.create(log_file_name)
+log_con <- file(log_file_name, open = "a") # open in the append more so that we can add stuff cumulatively
+
 library(dplyr)
+library(vcfR)
 
 return_sample <- function(ids_list, str_separator){
 
@@ -32,7 +41,7 @@ identify_vcf_files <- function(sample_type, sample_list){
 	vcf_list <- list() # intialize an empty list for the loop below 
 	for (sample_name in samples_list) {
 
-		# use regex to catch files starting witht the sample id and ending with the appropriate suffix
+		# use regex to #catch files starting witht the sample id and ending with the appropriate suffix
 		idx <- grep(paste0("^", sample_name, ".+bam_vcf_FILTERED_vcf$"), list.files(path_to_vcf), ignore.case = TRUE) # idx of the file we are interested in based on grep results, we need to grep once more though to remove the stats files we dont want
 		vcf_file <- list.files(path_to_vcf)[idx]
 		
@@ -50,8 +59,8 @@ load_vcf_from_list <- function(vcf_paths_list) {
 
 	for (vcf_path in vcf_paths_list){
 
-		vcf_file <- read.delim(vcf_path, sep = "\t")
-		vcf_file <- grep("^[^#]", vcf_file) # remove all lines that start with #, essentially the header
+		vcf_file <- read.vcfR(vcf_path, verbose = FALSE)
+		vcf_file <- vcf_file@fix # only grab the portion we are interested in
 
 		vcf_list <- append(vcf_list, vcf_file)
 
@@ -61,8 +70,62 @@ load_vcf_from_list <- function(vcf_paths_list) {
 
 }
 
-find_common_variants <- function(tumor_vcf, wbc_vcf)
-	# this function assumes that these files are the same length, and they have the same ids in the same location in both
+find_common_variants <- function(samples_list, tumor_vcf_paths, wbc_vcf_paths){
+
+	i <- 1
+	while (i <= length(samples_list)){
+
+		sample <- samples_list[i]
+		tumor_path <- tumor_vcf_paths[grep(sample, tumor_vcf_paths)]
+		wbc_path <- wbc_vcf_paths[grep(sample, wbc_vcf_paths)]
+
+		if (length(tumor_path) > 0 & length(wbc_path) > 0){
+			
+			noquote(c("Found both files, started sample", sample))
+			#cat(c("Found both files, started sample", sample), file = log_con)
+			# these are actually lists, not we will extract the actual path if we can identify both the ctDNA and WBC sample
+			tumor_path <- tumor_path[[1]]
+			wbc_path <- wbc_path[[1]]
+
+			# load the vcf files 
+			noquote("Started loading files.")
+			#cat("Started loading files.", file = log_con)
+			tumor <- read.vcfR(tumor_path, verbose = FALSE)
+			wbc <- read.vcfR(wbc_path, verbose = FALSE)
+
+			# only get what we need from the files
+			tumor <- as.data.frame(tumor@fix)[, c("CHROM",  "POS", "REF", "ALT", "FILTER")]
+			wbc <- as.data.frame(wbc@fix)[, c("CHROM",  "POS", "REF", "ALT", "FILTER")]
+
+			# remove the variants that failed
+			noquote("Filtering.")
+			#cat("Filtering.", file = log_con)
+			tumor <- filter(tumor, FILTER == "PASS")
+			wbc <- filter(wbc, FILTER == "PASS")
+
+			# now merge to keep the variants if they exist in both files
+			noquote("Merging.")
+			#cat("Merging.", file = log_con)
+			combined <- merge(tumor, wbc)
+			path_combined <- paste0("/groups/wyattgrp/users/amunzur/chip_project/common_variants/", sample, ".csv")
+			
+			if (dim(combined)[1] != 0) {
+				noquote(c("Writing to csv. Found", dim(combined)[1], "common variants."))
+				#cat(c("Writing to csv. Found", dim(combined)[1], "common variants."), , file = log_con)
+				write.csv(combined, path_combined)} else {"No common variants."}
+
+			noquote("\n")
+
+		} else {
+			noquote(c("Skipped sample:", sample))
+			#cat(c("Skipped sample:", sample), file = log_con)
+
+		}
+		i = i + 1
+
+	} # end of while loop
+
+} # end of function 
 
 # get the sample ids and sort 
 tumor_ids <- as.list(sort(grep("^[GU]", list.files("/groups/wyattgrp/users/amunzur/chip_project/finland_bams/ctDNA_prognosis_ORIGINAL"), value = TRUE)))
@@ -72,11 +135,11 @@ wbc_ids <- as.list(sort(grep("^[GU]", list.files("/groups/wyattgrp/users/amunzur
 tumor_sample <- return_sample(tumor_ids, "-cfDNA")
 wbc_sample <- return_sample(wbc_ids, "-WBC")
 
-if (identical(tumor_sample, wbc_sample)) {print("Good to go!")} else {
-  print("Something is seriously wrong, working on it.")
+if (identical(tumor_sample, wbc_sample)) {noquote("Good to go!")} else {
+  noquote("Something is seriously wrong, working on it.")
   
   samples_list <- intersect(tumor_sample, wbc_sample)
-  print("All good now.")
+  noquote("All good now.")
     }
 
 tumor_ids <- subset_list(tumor_ids, samples_list, "-cfDNA")
@@ -86,8 +149,14 @@ wbc_ids <- subset_list(wbc_ids, samples_list, "-WBC")
 tumor_vcf_paths <- as.list(identify_vcf_files("cfDNA", samples_list))
 wbc_vcf_paths <- as.list(identify_vcf_files("WBC", samples_list))
 
-# load vcf files 
-tumor_vcf <- 
+# add the prefixes to both to include the absolute path 
+tumor_vcf_paths <- lapply(tumor_vcf_paths, function(some_string) paste0("/groups/wyattgrp/users/amunzur/chip_project/mutect_results_filtered/ctDNA_prognosis/", some_string))
+wbc_vcf_paths <- lapply(wbc_vcf_paths, function(some_string) paste0("/groups/wyattgrp/users/amunzur/chip_project/mutect_results_filtered/GU_finland_download/", some_string))
 
 
+# load vcf files, add the necessary prefix to the paths
+find_common_variants(samples_list, tumor_vcf_paths, wbc_vcf_paths)
+
+proc.time() - ptm # end timer
+noquote(format(Sys.time(), "%a %b %d %X %Y"))
 
