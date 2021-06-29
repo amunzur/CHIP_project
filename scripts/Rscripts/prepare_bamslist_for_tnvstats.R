@@ -66,6 +66,24 @@ remove_samples <- function(to_remove, path_to_file, overwrite){
 
 } # end of function
 
+replace_sample_with_full_names <- function(path_to_full_names, samples_list) {
+
+	full_names <- unlist(lapply(as.list(readLines(path_to_full_names)), basename))
+
+	for (sample in samples_list) {
+
+		idx <- which(samples_list == sample) # this will help replace the sample with the full_sample name later on
+		sample <- strsplit(sample, "RG_")[[1]][[2]] # remove the RG_string at teh beginning of the sample name
+		
+		sample_full_name <- grep(sample, full_names, value = TRUE) # grep the full name of the sample
+		samples_list[idx] <- sample_full_name # make inplace replacement ot avoid making another variable 
+
+	} #end of for loop 
+
+	return(samples_list)
+
+} # end of function
+
 path_to_ctdna <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/ctDNA_bams"
 path_to_wbc <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/wbc_bams"
 
@@ -73,8 +91,8 @@ path_to_ctdna_original <- "/groups/wyattgrp/users/amunzur/chip_project/finland_b
 path_to_wbc_original <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/wbc_original"
 
 # remove the samples we arent interested in
-remove_samples(path_to_ctdna, c("18-246", "18-329"), TRUE)
-remove_samples(path_to_wbc, c("18-246", "18-329"), TRUE)
+remove_samples(path_to_ctdna, c("18-246", "18-329"), FALSE)
+remove_samples(path_to_wbc, c("18-246", "18-329"), FALSE)
 
 # this just helps to cleanup the strings and prepare the sample names for matching
 ctdna_samples <- get_sample_name(path_to_ctdna, "-cfDNA")
@@ -109,6 +127,11 @@ for (x in wbc_samples) {
 	wbc_file <- readLines(path_to_wbc) # load the file with the wbc paths 
 	file_path <- grep(x, wbc_file, value = TRUE, ignore.case = TRUE)
 	wbc_paths_list <- append(wbc_paths_list, file_path)}
+
+# so far the samples we have been working with don't have the full sample name, only the patient id. 
+# this piece of code below completes the id with the rest of it, not just the patient id. 
+ctdna_samples <- replace_sample_with_full_names(path_to_ctdna_original, ctdna_samples)
+wbc_samples <- replace_sample_with_full_names(path_to_wbc_original, wbc_samples)
 
 # now save everything to a delim file 
 DF <- data.frame(
