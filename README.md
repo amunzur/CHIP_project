@@ -16,12 +16,12 @@ Scripts located in `scripts/Mutect2` filter the bam files, run Mutect2 on them a
 Scripts in this section are found in `scripts/Rscripts`. 
 1. `curate_mutect.R`: This script curates the mutect outputs based on manual curation and insights we gain from tnvstats. Before running this, we need to manually go through all the IGV snapshots for the mutect mutations and save the ones we think are real somewhere. Then this script will go through those png files and filter. The complete list of outputs from this script is as follows:
 
-- `subsetted/curated_muts.csv`: Main output of the script, contains the curated list of mutations afrter scrutinous curation and filtering
-- `tnvstats_mutect_compared/both.csv`: Mutations identified by both pipelines
-- `tnvstats_mutect_compared/mutect_only.csv`: Mutations identified by mutect only, may contain duplicate mutations that occurred in more than one patient.
-- `tnvstats_mutect_compared/mutect_only_filtered.csv`: Almost the same as above, but this one has unique mutations only, no duplicates. 
-- `tnvstats_mutect_compared/elie_only.csv`: Mutations identified by in-house pipeline only
-- `tnvstats_mutect_compared/combined.csv`: All muts are here, indicating whether they are found in only one pipeline or both. Good concise file for referencing later on. 
+	- `subsetted/curated_muts.csv`: Main output of the script, contains the curated list of mutations afrter scrutinous curation and filtering
+	- `tnvstats_mutect_compared/both.csv`: Mutations identified by both pipelines
+	- `tnvstats_mutect_compared/mutect_only.csv`: Mutations identified by mutect only, may contain duplicate mutations that occurred in more than one patient.
+	- `tnvstats_mutect_compared/mutect_only_filtered.csv`: Almost the same as above, but this one has unique mutations only, no duplicates. 
+	- `tnvstats_mutect_compared/elie_only.csv`: Mutations identified by in-house pipeline only
+	- `tnvstats_mutect_compared/combined.csv`: All muts are here, indicating whether they are found in only one pipeline or both. Good concise file for referencing later on. 
 
 
 ## Calculating coverage 
