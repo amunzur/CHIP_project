@@ -21,11 +21,11 @@ conda activate mito
 ###########################################
 # or can also give a list of paths to bam files to run, instead of running it on every bam file in the given dir.
 path_to_bamList="/groups/wyattgrp/users/amunzur/chip_project/scripts/Mutect2/bamList.txt"
-cd /groups/wyattgrp/users/amunzur/chip_project/finland_bams/GU_finland_download_ORIGINAL # I'll fix this later but for now, we need to cd into the dir with bams, even if we use a file with bam ids.
+cd /groups/wyattgrp/users/amunzur/chip_project/finland_bams/new_finland_download # I'll fix this later but for now, we need to cd into the dir with bams, even if we use a file with bam ids.
 
 cat $path_to_bamList | while read bam_file || [[ -n $bam_file ]];
 do
-	printf "bash ${script_dir}/run_Mutect2.sh ${bam_file}"
-	sbatch --exclude=cn[01-05] /groups/wyattgrp/users/amunzur/chip_project/scripts/run_Mutect2.sh ${bam_file};
+	printf "bash ${script_dir}/run_Mutect2.sh ${bam_file} "
+	sbatch --exclude=cn[01-05] ${script_dir}/run_Mutect2.sh ${bam_file};
 done
 
