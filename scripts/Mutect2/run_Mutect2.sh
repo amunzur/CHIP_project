@@ -12,7 +12,8 @@
 bam_file=$1
 output_dir="/groups/wyattgrp/users/amunzur/chip_project/mutect2_results/GU_finland_download" # update this if it is a different sample group.
 
-
+########################################################################
+# mark duplicates
 if [ ! -f rmdup_$bam_file ]
 then
 	printf "\n"
@@ -24,18 +25,16 @@ then
 else
     echo "rmdup bam found. Skipping."
 fi
-
 ########################################################################
-
+# fixmate
 if [ ! -f fixed_mate_$bam_file ]
 then
     picard FixMateInformation I=rmdup_$bam_file O=fixed_mate_$bam_file ADD_MATE_CIGAR=true
 else
     echo "fixmate bam found. Skipping."
 fi
-
 ########################################################################
-
+# add read groups
 if [ ! -f RG_$bam_file ]
 then
     picard AddOrReplaceReadGroups \
@@ -52,21 +51,25 @@ then
 else
     echo "RG bam found. Skipping."
 fi
+########################################################################
+# remove unmapped and low quality reads
+samtools view -bq 20 -F 4 "RG_$bam_file" > "filtered_RG_${bam_file}"
 
 ########################################################################
-
+# run mutect
 if [ ! -f $output_dir$bam_vcf.gz ]
 then
-	# printf "\n"
-	# printf "******************************\n*"
-	# printf "VARIANT CALLING\n"
-	# printf "*******************************\n"
+	printf "\n"
+	printf "******************************\n*"
+	printf "VARIANT CALLING\n"
+	printf "*******************************\n"
 
-	# /home/amunzur/gatk-4.2.0.0/gatk Mutect2 \
-	# -R /groups/wyattgrp/users/amunzur/chip_project/references/hg38.fa \
-	# -I $RG_bam_file \
-	# -O $output_dir$bam_vcf.gz
-
+	/home/amunzur/gatk-4.2.0.0/gatk Mutect2 \
+	-R /groups/wyattgrp/users/amunzur/chip_project/references/hg38.fa \
+	-I filtered_RG_${bam_file} \
+	-O $output_dir$bam_vcf.gz
+########################################################################
+# filter mutect results
     printf "\n"
     printf "******************************\n*"
     printf "FILTERING MUTECT RESULTS\n"
@@ -80,6 +83,7 @@ then
 else
     echo "Mutect results found. Skipping."
 fi
+########################################################################
 
 
 
