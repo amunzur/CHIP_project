@@ -11,7 +11,7 @@
 
 bam_file=$1
 output_dir="/groups/wyattgrp/users/amunzur/chip_project/mutect2_results/GU_finland_download" # update this if it is a different sample group.
-
+mkdir -p $output_dir # make it if it doesn't exist
 ########################################################################
 # mark duplicates
 if [ ! -f rmdup_$bam_file ]
@@ -54,6 +54,7 @@ fi
 ########################################################################
 # remove unmapped and low quality reads
 samtools view -bq 20 -F 4 "RG_$bam_file" > "filtered_RG_${bam_file}"
+samtools index "filtered_RG_${bam_file}"
 
 ########################################################################
 # run mutect
