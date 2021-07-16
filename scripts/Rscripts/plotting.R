@@ -30,7 +30,8 @@ p2 <- plot_ly(data = df,
         color = ~STATUS,
         type = "scatter",
         mode = "markers",
-        marker = list(size = 5)) %>% 
+        marker = list(size = 5), 
+        text = labelling) %>% 
   layout(legend= list(itemsizing='constant'))
 
 

@@ -1,0 +1,2 @@
+This dir contains the code and files necessary to run the extra 20 samples Matti aligned again. Previously we had an issue with them such that some reads had the same ids. 
+After the realignment, we put them through the mutect output, using the scripts we have here. 
