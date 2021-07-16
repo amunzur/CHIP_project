@@ -3,7 +3,7 @@ configfile="/groups/wyattgrp/users/amunzur/chip_project/scripts/Mutect2/config.t
 conda_profile_path="/home/$(whoami)/anaconda3/etc/profile.d/conda.sh"
 source ${configfile};
 source ${conda_profile_path};
-conda activate mito 
+conda activate variant_calling 
 
 ###########################################
 # option 1: run the code on all bam files in the dir given below
