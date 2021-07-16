@@ -11,6 +11,7 @@
 
 bam_file=$1
 output_dir="/groups/wyattgrp/users/amunzur/chip_project/mutect2_results/GU_finland_download/" # update this if it is a different sample group.
+
 mkdir -p $output_dir # make it if it doesn't exist
 ########################################################################
 # mark duplicates
@@ -69,6 +70,7 @@ then
 	-R /groups/wyattgrp/users/amunzur/chip_project/references/hg38.fa \
 	-I filtered_RG_${bam_file} \
 	-O "${output_dir}${bam_file}_vcf.gz"
+    
 ########################################################################
 # filter mutect results
     printf "\n"
