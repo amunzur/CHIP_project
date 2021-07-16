@@ -10,18 +10,35 @@
 #SBATCH --error=/groups/wyattgrp/log/%j.log
 
 bam_file=$1
-output_dir="/groups/wyattgrp/users/amunzur/chip_project/mutect2_results/GU_finland_download"
+output_dir="/groups/wyattgrp/users/amunzur/chip_project/mutect2_results/GU_finland_download" # update this if it is a different sample group.
 
-printf "\n"
-printf "*******************************\n"
-printf "FIXMATE - $bam_file\n"
-printf "*******************************\n"
 
-picard MarkDuplicates I=$bam_file O=rmdup_$bam_file M=/groups/wyattgrp/users/amunzur/chip_project/finland_bams/MarkDuplication_metrics/rmdup_$bam_file REMOVE_DUPLICATES=true
+if [ ! -f rmdup_$bam_file ]
+then
+	printf "\n"
+	printf "*******************************\n"
+	printf "FIXMATE - $bam_file\n"
+	printf "*******************************\n"
 
-picard FixMateInformation I=rmdup_$bam_file O=fixed_mate_$bam_file ADD_MATE_CIGAR=true
+    picard MarkDuplicates I=$bam_file O=rmdup_$bam_file M=/groups/wyattgrp/users/amunzur/chip_project/finland_bams/MarkDuplication_metrics/rmdup_$bam_file REMOVE_DUPLICATES=true
+else
+    echo "rmdup bam found. Skipping."
+fi
 
-picard AddOrReplaceReadGroups \
+########################################################################
+
+if [ ! -f fixed_mate_$bam_file ]
+then
+    picard FixMateInformation I=rmdup_$bam_file O=fixed_mate_$bam_file ADD_MATE_CIGAR=true
+else
+    echo "fixmate bam found. Skipping."
+fi
+
+########################################################################
+
+if [ ! -f RG_$bam_file ]
+then
+    picard AddOrReplaceReadGroups \
     I=fixed_mate_$bam_file \
     O=RG_$bam_file \
     RGID=1 \
@@ -30,15 +47,43 @@ picard AddOrReplaceReadGroups \
     RGPU=unit \
     RGSM=sample
 
-samtools index RG_$bam_file
+    samtools index RG_$bam_file
 
-printf "\n"
-printf "******************************\n*"
-printf "VARIANT CALLING\n"
-printf "*******************************\n"
+else
+    echo "RG bam found. Skipping."
+fi
 
-/home/amunzur/gatk-4.2.0.0/gatk Mutect2 \
--R /groups/wyattgrp/users/amunzur/chip_project/references/hg38.fa \
--I $RG_bam_file \
--O $output_dir$bam_vcf.gz
+########################################################################
+
+if [ ! -f $output_dir$bam_vcf.gz ]
+then
+	# printf "\n"
+	# printf "******************************\n*"
+	# printf "VARIANT CALLING\n"
+	# printf "*******************************\n"
+
+	# /home/amunzur/gatk-4.2.0.0/gatk Mutect2 \
+	# -R /groups/wyattgrp/users/amunzur/chip_project/references/hg38.fa \
+	# -I $RG_bam_file \
+	# -O $output_dir$bam_vcf.gz
+
+    printf "\n"
+    printf "******************************\n*"
+    printf "FILTERING MUTECT RESULTS\n"
+    printf "*******************************\n"
+
+    /home/amunzur/gatk-4.2.0.0/gatk FilterMutectCalls \
+    -R /groups/wyattgrp/users/amunzur/chip_project/references/hg38.fa \
+    -V $output_dir$bam_vcf.gz \
+    -O "${output_dir}${vcf_file}_FILTERED_vcf"
+    
+else
+    echo "Mutect results found. Skipping."
+fi
+
+
+
+
+
+
 
