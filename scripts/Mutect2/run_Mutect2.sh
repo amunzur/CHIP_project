@@ -10,7 +10,7 @@
 #SBATCH --error=/groups/wyattgrp/log/%j.log
 
 bam_file=$1
-output_dir="/groups/wyattgrp/users/amunzur/chip_project/mutect2_results/GU_finland_download" # update this if it is a different sample group.
+output_dir="/groups/wyattgrp/users/amunzur/chip_project/mutect2_results/GU_finland_download/" # update this if it is a different sample group.
 mkdir -p $output_dir # make it if it doesn't exist
 ########################################################################
 # mark duplicates
@@ -58,7 +58,7 @@ samtools index "filtered_RG_${bam_file}"
 
 ########################################################################
 # run mutect
-if [ ! -f $output_dir$bam_vcf.gz ]
+if [ ! -f $output_dir$bam_file_vcf.gz ]
 then
 	printf "\n"
 	printf "******************************\n*"
@@ -68,7 +68,7 @@ then
 	/home/amunzur/gatk-4.2.0.0/gatk Mutect2 \
 	-R /groups/wyattgrp/users/amunzur/chip_project/references/hg38.fa \
 	-I filtered_RG_${bam_file} \
-	-O $output_dir$bam_vcf.gz
+	-O "${output_dir}${bam_file}_vcf.gz"
 ########################################################################
 # filter mutect results
     printf "\n"
@@ -78,8 +78,8 @@ then
 
     /home/amunzur/gatk-4.2.0.0/gatk FilterMutectCalls \
     -R /groups/wyattgrp/users/amunzur/chip_project/references/hg38.fa \
-    -V $output_dir$bam_vcf.gz \
-    -O "${output_dir}${vcf_file}_FILTERED_vcf"
+    -V "${output_dir}${bam_file}_vcf.gz" \
+    -O "${output_dir}${bam_file}_FILTERED_vcf"
     
 else
     echo "Mutect results found. Skipping."
