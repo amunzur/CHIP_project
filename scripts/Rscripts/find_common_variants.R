@@ -10,7 +10,7 @@ library(tidyverse)
 library(vcfR)
 
 # the path where the common variants will be saved as csv
-path_to_common_variants <- "/groups/wyattgrp/users/amunzur/chip_project/common_variants/new_finland_download"
+path_to_common_variants <- "/groups/wyattgrp/users/amunzur/chip_project/common_variants/new_finland_download/" # make sure this ends with /
 
 return_sample <- function(ids_list, str_separator){
 
@@ -48,11 +48,16 @@ get_sample_ids <- function(sample_type) {
 
 	} else if (sample_type == "new_samples_cfDNA") {
 		path_to_bams <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/new_finland_download"
-		ids <- as.list(sort(grep("Baseline|cfDNA", list.files(path_to_bams, pattern = ".bam$"), value = TRUE, ignore.case = TRUE))) 
+		ids <- as.list(sort(grep("Baseline|cfDNA", list.files(path_to_bams, pattern = ".bam$"), value = TRUE, ignore.case = TRUE)))
+		to_keep <- !grepl("filtered_RG_", ids) # keep the samples that dont start with "filtered_RG_". More about why we do this at the end of the script.
+		ids <- ids[to_keep]
 
 	} else if (sample_type == "new_samples_WBC") {
 		path_to_bams <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/new_finland_download"
-		ids <- as.list(sort(grep("WBC", list.files(path_to_bams, pattern = ".bam$"), value = TRUE, ignore.case = TRUE))) 
+		ids <- as.list(sort(grep("WBC", list.files(path_to_bams, pattern = ".bam$"), value = TRUE, ignore.case = TRUE)))
+		to_keep <- !grepl("filtered_RG_", ids) # keep the samples that dont start with "filtered_RG_". More about why we do this at the end of the script.
+		ids <- ids[to_keep]
+
 	} # end of if loop
 
 	return(ids)
@@ -80,7 +85,8 @@ identify_vcf_files <- function(sample_type, samples_list){
 		if (sample_type != "new_samples") {vcf_file <- file.path(path_to_vcf, paste0(sample_name, "_vcf_FILTERED_vcf")) # initial cohort
 		} else { vcf_file <- file.path(path_to_vcf, paste0(sample_name, "_FILTERED_vcf")) } # second cohort
 
-		vcf_list <- append(vcf_list, vcf_file) # add the file to the list 
+		if (file.exists(vcf_file)) { vcf_list <- append(vcf_list, vcf_file) # add the file to the list if it exists
+		} else { print(c("File doesn't exist:", vcf_file)) }
 
 	} # end of for loop
 
@@ -98,7 +104,7 @@ find_common_variants <- function(samples_list, tumor_vcf_paths, wbc_vcf_paths, p
 
 		if (length(tumor_path) > 0 & length(wbc_path) > 0){
 			
-			print(c("Found both files, started sample", sample))
+			print(c("Found both files, started sample", unlist(sample)))
 			# these are actually lists, we will extract the actual path if we can identify both the ctDNA and WBC sample
 			tumor_path <- tumor_path[[1]]
 			wbc_path <- wbc_path[[1]]
