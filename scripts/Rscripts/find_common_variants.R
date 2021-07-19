@@ -87,24 +87,6 @@ identify_vcf_files <- function(sample_type, samples_list){
 	return(as.list(sort(unlist(vcf_list))))
 }
 
-load_vcf_from_list <- function(vcf_paths_list) {
-
-	# super simple function that loads the relevant vcf files given a list of paths, and saves them in a list as dataframes
-	vcf_list <- list()
-
-	for (vcf_path in vcf_paths_list){
-
-		vcf_file <- read.vcfR(vcf_path, verbose = FALSE)
-		vcf_file <- vcf_file@fix # only grab the portion we are interested in
-
-		vcf_list <- append(vcf_list, vcf_file)
-
-	} # end of for loop
-
-	return(vcf_list)
-
-}
-
 find_common_variants <- function(samples_list, tumor_vcf_paths, wbc_vcf_paths, path_to_common, save){
 
 	i <- 1
