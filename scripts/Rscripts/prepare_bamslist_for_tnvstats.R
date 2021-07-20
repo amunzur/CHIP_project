@@ -170,7 +170,8 @@ path_to_ctdna <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamsl
 path_to_wbc <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/wbc_bams_new_finland_download" # filtered sample - wbc
 path_to_ctdna_original <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/ctDNA_bams_original_new_finland_download" # raw sample - tumor
 path_to_wbc_original <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/wbc_bams_original_new_finland_download" # raw sample - wbc
-path_to_final_DF <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/tnvstats_bamList_new_finland_download.csv"
+path_to_final_DF_BAM <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/tnvstats_bamList_new_finland_download.csv"
+path_to_final_DF_SAM <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/tnvstats_samList_new_finland_download.csv"
 
 # save the FILTERED wbc and tumor samples to text files 
 all_bams <- as.list(grep("^filtered_RG_.*\\.bam$", list.files(dir_to_all_bams), ignore.case = TRUE, value = TRUE)) # all files are here, we'll do some magic to catch the wbc and ctdna samples, and exclude the bai files 
@@ -241,4 +242,29 @@ DF <- data.frame(
 	wbc_samples = wbc_samples, 
 	wbc_paths = unlist(wbc_paths_list))
 
-write.csv(DF, path_to_final_DF, row.names = FALSE)
+# file shouldnt have colnames for tnvstats to run
+colnames(DF) <- NULL
+write.csv(DF, path_to_final_DF_BAM, row.names = FALSE)
+write.csv(DF, path_to_final_DF_SAM, row.names = FALSE)
+
+# and this part slighly modifies it so that we can run tnvstats on sam files 
+path_to_final_DF_BAM="/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/tnvstats_bamList_new_finland_download.csv"
+path_to_final_DF_BAM_txt="/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/tnvstats_bamList_new_finland_download.txt"
+
+path_to_final_DF_SAM="/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/tnvstats_samList_new_finland_download.csv"
+path_to_final_DF_SAM_txt="/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/tnvstats_samList_new_finland_download.txt"
+
+# deal with sam list 
+cat $path_to_final_DF_SAM | tr  ',' '\t' > $path_to_final_DF_SAM_txt
+
+perl -pi -e "s/.bam/.bam.sam/g" ${path_to_final_DF_SAM_txt}
+perl -pi -e "s/finland.bam.sams/finland_bams/g" ${path_to_final_DF_SAM_txt}
+perl -pi -e "s/new_finland_download/new_finland_download_SAM/g" ${path_to_final_DF_SAM_txt}
+sed -i 's/\"//g' ${path_to_final_DF_SAM_txt}
+
+# deal with bam list
+cat $path_to_final_DF_BAM | tr  ',' '\t' > $path_to_final_DF_BAM_txt
+
+perl -pi -e "s/filtered_RG/UNCOMP_filtered_RG/g" ${path_to_final_DF_BAM_txt}
+perl -pi -e "s/new_finland_download/new_finland_download_UNCOMP/g" ${path_to_final_DF_BAM_txt}
+sed -i 's/\"//g' ${path_to_final_DF_BAM_txt}
