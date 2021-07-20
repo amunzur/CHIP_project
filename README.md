@@ -9,7 +9,7 @@ Scripts in this section are found in `scripts/Rscripts`. The outputs of the scri
 
 1. **`prepare_bamslist_for_tnvstats.R`**: This unnessarily complicated script prepares a list of bam files in a text file in order to run tnvstats. The important thing is to make sure that the tumor and wbc ids match in a given row. It outputs the text file to `finland_bams/bamslist/tnvstats_bamList.csv` and overwrites each time the script is run. 
 
-2. **`find_common_variants.R`**: As the first step after running and filtering Mutect, this script identifies the common variants between the wbc and tumor samples, and saves the output to separate csv files for each samples in `common_variants/`, since the mutations that are likely to be CHIP must exist in both WBC and tumor samples.
+2. **`find_common_variants.R`**: As the first step after running and filtering Mutect, this script identifies the common variants between the wbc and tumor samples, and saves the output to separate csv files for each samples in `common_variants/`, since the mutations that are likely to be CHIP must exist in both WBC and tumor samples. The script will only consider samples with both tumor and wbc vcf files.
 
 3. **`get_vaf_from_tnvstats.R`**: For each sample, this script cross-checks the information from Mutect2 with tnvstats. Mainly, for each identified variant, it identifies the tumor vaf & read support, wbc vaf & read support. Based on the thresholds given in the script, it then filters the mutect results to retain the significant variants only.
 
