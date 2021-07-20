@@ -1,5 +1,13 @@
 library(tidyverse)
 
+save_to_file <- function(thing_to_save, path_to_file) {
+	# just a helper function to save files
+
+	fileConn <- file(path_to_file)
+	writeLines(sort(unlist(thing_to_save)), fileConn)
+	close(fileConn)
+
+}
 get_sample_name <- function(path_to_dir, key) {
 
 	path_list <- readLines(path_to_dir)
@@ -10,6 +18,14 @@ get_sample_name <- function(path_to_dir, key) {
 	if (key == "-cfDNA") { 
 		samples_list <- sort(unlist(lapply(samples_list, function(some_name) strsplit(some_name, "-1st")[[1]][[1]])))
 		samples_list <- sort(unlist(lapply(samples_list, function(some_name) strsplit(some_name, "-16Aug2017")[[1]][[1]]))) }
+
+	if (key == "-cfDNA|-Baseline|_cfDNA|_Baseline") { # for some samples in new_finland_download
+		samples_list <- sort(unlist(lapply(samples_list, function(some_name) strsplit(some_name, "-1st")[[1]][[1]])))
+		samples_list <- sort(unlist(lapply(samples_list, function(some_name) strsplit(some_name, "-9Feb17")[[1]][[1]])))
+		samples_list <- sort(unlist(lapply(samples_list, function(some_name) strsplit(some_name, "-9Feb17")[[1]][[1]])))
+		samples_list <- sort(unlist(lapply(samples_list, function(some_name) strsplit(some_name, "-23May2017")[[1]][[1]])))
+		samples_list <- sort(unlist(lapply(samples_list, function(some_name) strsplit(some_name, "-24Jul2017")[[1]][[1]]))) }
+
 
 	return(samples_list)
 }
@@ -72,6 +88,8 @@ replace_sample_with_full_names <- function(path_to_full_names, samples_list) {
 
 	for (sample in samples_list) {
 
+		if (sample == "filtered_RG_M1RP_ID1" || sample == "filtered_RG_M1RP_ID3" || sample == "filtered_RG_M1RP_ID4") {sample <- paste0(x, "_")}
+
 		idx <- which(samples_list == sample) # this will help replace the sample with the full_sample name later on
 		sample <- strsplit(sample, "RG_")[[1]][[2]] # remove the RG_string at teh beginning of the sample name
 		
@@ -84,6 +102,9 @@ replace_sample_with_full_names <- function(path_to_full_names, samples_list) {
 
 } # end of function
 
+###################################################
+# INITIAL COHORT - GU
+###################################################
 path_to_ctdna <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/ctDNA_bams"
 path_to_wbc <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/wbc_bams"
 
@@ -101,9 +122,6 @@ wbc_samples <- get_sample_name(path_to_wbc, "-WBC")
 # this prints out the missing samples we need to work on before moving onto the next step
 find_missing_samples(ctdna_samples, wbc_samples, path_to_ctdna_original, path_to_wbc_original)
 
-###################################################
-# PREPARE BAMSLIST FOR TNVSTATS
-###################################################
 # bamslist is a delim file with sample names and paths to those samples
 # this step assumes that we have a ctdna and wbc match for every sample
 ctdna_samples <- sort(ctdna_samples)
@@ -142,3 +160,85 @@ DF <- data.frame(
 
 write.csv(DF, "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/tnvstats_bamList.csv", row.names = FALSE)
 
+###################################################
+# SECOND DOWNLOAD FROM FINLAND
+###################################################
+dir_to_all_bams <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/new_finland_download" # dir that contains the bam files
+
+# paths that we will saving the text files to
+path_to_ctdna <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/ctDNA_bams_new_finland_download" # filtered sample - tumor
+path_to_wbc <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/wbc_bams_new_finland_download" # filtered sample - wbc
+path_to_ctdna_original <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/ctDNA_bams_original_new_finland_download" # raw sample - tumor
+path_to_wbc_original <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/wbc_bams_original_new_finland_download" # raw sample - wbc
+path_to_final_DF <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/bamslist/tnvstats_bamList_new_finland_download.csv"
+
+# save the FILTERED wbc and tumor samples to text files 
+all_bams <- as.list(grep("^filtered_RG_.*\\.bam$", list.files(dir_to_all_bams), ignore.case = TRUE, value = TRUE)) # all files are here, we'll do some magic to catch the wbc and ctdna samples, and exclude the bai files 
+ctdna_samples <- as.list(grep("Baseline|cfDNA", all_bams, ignore.case = TRUE, value = TRUE))
+ctdna_samples <- lapply(ctdna_samples, function(some_bam) file.path(dir_to_all_bams, some_bam)) # abs path 
+wbc_samples <- as.list(grep("WBC", all_bams, ignore.case = TRUE, value = TRUE)) # all files that 
+wbc_samples <- lapply(wbc_samples, function(some_bam) file.path(dir_to_all_bams, some_bam)) # abs path 
+
+# write these to file - tumor
+save_to_file(ctdna_samples, path_to_ctdna)
+save_to_file(wbc_samples, path_to_wbc)
+
+# save the RAW wbc and tumor samples to text files
+all_bams <- as.list(grep(".bam$", list.files(dir_to_all_bams), ignore.case = TRUE, value = TRUE))
+to_keep <- !grepl("filtered_RG_", all_bams) # ids for bams that don't contain the string "filtered_RG_"
+all_bams <- all_bams[to_keep]
+ctdna_samples <- as.list(grep("Baseline|cfDNA", all_bams, ignore.case = TRUE, value = TRUE))
+ctdna_samples <- lapply(ctdna_samples, function(some_bam) file.path(dir_to_all_bams, some_bam)) # abs path 
+wbc_samples <- as.list(grep("WBC", all_bams, ignore.case = TRUE, value = TRUE)) # all files that 
+wbc_samples <- lapply(wbc_samples, function(some_bam) file.path(dir_to_all_bams, some_bam)) # abs path 
+
+# write these to file - tumor
+save_to_file(ctdna_samples, path_to_ctdna_original)
+save_to_file(wbc_samples, path_to_wbc_original)
+
+# clean up strings, get sample name - helps make sure we work with the right tumor - wbc pair 
+ctdna_samples <- get_sample_name(path_to_ctdna, "-cfDNA|-Baseline|_cfDNA|_Baseline")
+wbc_samples <- get_sample_name(path_to_wbc, "-WBC|_WBC")
+
+# this prints out the missing samples we need to work on before moving onto the next step
+find_missing_samples(ctdna_samples, wbc_samples, path_to_ctdna_original, path_to_wbc_original)
+
+ctdna_samples <- sort(ctdna_samples)
+wbc_samples <- sort(wbc_samples)
+
+# check if these two lists are identical - if all good to go, continue.
+if (identical(ctdna_samples, wbc_samples)) {print("The samples are identical. Good to go!")} else {"Something is seriously wrong."}
+
+ctdna_paths_list <- list()
+wbc_paths_list <- list()
+
+for (x in ctdna_samples) {
+	
+	# some minor modifications in the namig, otherwise grep gets confused: 
+	if (x == "filtered_RG_M1RP_ID1" || x == "filtered_RG_M1RP_ID3" || x == "filtered_RG_M1RP_ID4") {x <- paste0(x, "_")}
+
+	ctdna_file <- readLines(path_to_ctdna) # load the file with the ctdna paths
+	file_path <- grep(x, ctdna_file, value = TRUE, ignore.case = TRUE)
+	ctdna_paths_list <- append(ctdna_paths_list, file_path)}
+
+for (x in wbc_samples) {
+
+	if (x == "filtered_RG_M1RP_ID1" || x == "filtered_RG_M1RP_ID3" || x == "filtered_RG_M1RP_ID4") {x <- paste0(x, "_")}
+	
+	wbc_file <- readLines(path_to_wbc) # load the file with the wbc paths 
+	file_path <- grep(x, wbc_file, value = TRUE, ignore.case = TRUE)
+	wbc_paths_list <- append(wbc_paths_list, file_path)}
+
+# so far the samples we have been working with don't have the full sample name, only the patient id. 
+# this piece of code below completes the id with the rest of it, not just the patient id. 
+ctdna_samples <- replace_sample_with_full_names(path_to_ctdna_original, ctdna_samples)
+wbc_samples <- replace_sample_with_full_names(path_to_wbc_original, wbc_samples)
+
+# now save everything to a delim file 
+DF <- data.frame(
+	ctdna_samples = ctdna_samples, 
+	ctdna_paths = unlist(ctdna_paths_list), 
+	wbc_samples = wbc_samples, 
+	wbc_paths = unlist(wbc_paths_list))
+
+write.csv(DF, path_to_final_DF, row.names = FALSE)
