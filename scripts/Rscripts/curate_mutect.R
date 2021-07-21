@@ -2,19 +2,35 @@
 
 library(tidyverse)
 
+# # INTIAL COHORT OF SAMPLES
+# # FILES TO UPLOAD 
+# path_to_snapshots <- "/wyattgrp/Asli/chip_project/snapshot/mutect_results/CHIP_MUTS" # dir that contains igv snapshots, after manual curation
+# path_to_mutect <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted_new/ALL_MERGED_FILTERED_0.2.csv" # file (not dir) that contains variants, after merging and filtering based on read support and vaf 
+# path_to_curated_elie <- "/groups/wyattgrp/users/echen/CHIP_project/results/curated2_bg_error_10.tsv"
+# path_to_mutect_and_elie <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted_new/MUTECT_ELIE_COMBINED.csv" # file that contains elies calls and mutect calls, output of this script
+
+# # FILES TO WRITE TO CSV 
+# path_to_curated_mutect <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted_new/curated_muts.csv" # file that will contain the curated muts, output of this script
+# path_to_both <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/both.csv"
+# path_to_mutect_only <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/mutect_only.csv"
+# path_to_mutect_only_filtered <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/mutect_only_filtered.csv"
+# path_to_tnvstats_only <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/elie_only.csv"
+# path_to_curated_combined <-"/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/combined.csv" # all muts are here, inbdicating whether they are found in only one pipeline or both
+
+# SECOND BATCH OF SAMPLES 
 # FILES TO UPLOAD 
-path_to_snapshots <- "/wyattgrp/Asli/chip_project/snapshot/mutect_results/CHIP_MUTS" # dir that contains igv snapshots, after manual curation
-path_to_mutect <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted_new/ALL_MERGED_FILTERED_0.2.csv" # file (not dir) that contains variants, after merging and filtering based on read support and vaf 
-path_to_curated_elie <- "/groups/wyattgrp/users/echen/CHIP_project/results/curated2_bg_error_10.tsv"
-path_to_mutect_and_elie <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted_new/MUTECT_ELIE_COMBINED.csv" # file that contains elies calls and mutect calls, output of this script
+path_to_snapshots <- "/groups/wyattgrp/users/amunzur/chip_project/snapshot/new_finland_download/mutect_0.2_curated" # dir that contains igv snapshots, after manual curation
+path_to_mutect <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted/new_finland_download/ALL_MERGED_FILTERED_0.2.csv" # file (not dir) that contains variants, after merging and filtering based on read support and vaf 
+# path_to_curated_elie <- "/groups/wyattgrp/users/echen/CHIP_project/results/curated2_bg_error_10.tsv"
+# path_to_mutect_and_elie <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted_new/MUTECT_ELIE_COMBINED.csv" # file that contains elies calls and mutect calls, output of this script
 
 # FILES TO WRITE TO CSV 
-path_to_curated_mutect <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted_new/curated_muts.csv" # file that will contain the curated muts, output of this script
-path_to_both <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/both.csv"
-path_to_mutect_only <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/mutect_only.csv"
-path_to_mutect_only_filtered <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/mutect_only_filtered.csv"
-path_to_tnvstats_only <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/elie_only.csv"
-path_to_curated_combined <-"/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/combined.csv" # all muts are here, inbdicating whether they are found in only one pipeline or both
+path_to_curated_mutect <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted/new_finland_download/curated_muts.csv" # file that will contain the curated muts, output of this script
+# path_to_both <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/both.csv"
+# path_to_mutect_only <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/mutect_only.csv"
+# path_to_mutect_only_filtered <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/mutect_only_filtered.csv"
+# path_to_tnvstats_only <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/elie_only.csv"
+# path_to_curated_combined <-"/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/combined.csv" # all muts are here, inbdicating whether they are found in only one pipeline or both
 
 cleanup_mutect_results <- function(mutect_combined){
 
@@ -70,6 +86,11 @@ mutect <- read.csv(path_to_mutect) # read mutect results
 
 # get the bam id, chr and location from the snapshot names
 snapshot_names <- unlist(lapply(as.list(list.files(path_to_snapshots)), function(some_name) strsplit(some_name, "_")[[1]]))
+
+# these need to be removed, this is just the windows batch file name stuff
+idx <- match(tail(snapshot_names, 5), snapshot_names)
+snapshot_names <- snapshot_names[-idx]
+
 SAMPLE_ID <- snapshot_names[seq(1, length(snapshot_names), 3)] # starting from 1, every 3rd element is the sample id
 CHROM <- snapshot_names[seq(2, length(snapshot_names), 3)] # starting from 2, every 3rd elements is the chrom
 POSITION <- unlist(lapply(as.list(snapshot_names[seq(3, length(snapshot_names), 3)]), function(some_name) strsplit(some_name, ".", fixed = TRUE)[[1]][[1]])) # starting from 3, every 3rd elements is the position
