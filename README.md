@@ -1,6 +1,5 @@
 # CHIP_project
 
-
 ## Sample filtering and variant calling
 Scripts located in `scripts/Mutect2` filter the bam files, run Mutect2 on them and remove the false positives using GATK's functions. The filtering consists of removing duplicates, fixing read mates, adding read groups and removing low quality reads. After running and filtering Mutect2, the nest section of R scripts clean up the results and compare the found variants to the results from other pipelines. 
 
@@ -11,12 +10,14 @@ Scripts in this section are found in `scripts/Rscripts`. The outputs of the scri
 
 2. **`find_common_variants.R`**: As the first step after running and filtering Mutect, this script identifies the common variants between the wbc and tumor samples, and saves the output to separate csv files for each samples in `common_variants/`, since the mutations that are likely to be CHIP must exist in both WBC and tumor samples. The script will only consider samples with both tumor and wbc vcf files.
 
-3. **`get_vaf_from_tnvstats.R`**: For each sample, this script cross-checks the information from Mutect2 with tnvstats. Mainly, for each identified variant, it identifies the tumor vaf & read support, wbc vaf & read support. Based on the thresholds given in the script, it then filters the mutect results to retain the significant variants only.
+3. **`get_vaf_from_tnvstats.R`**: For each sample, this script cross-checks the information from Mutect2 with tnvstats. Mainly, for each identified variant, it identifies the tumor vaf & read support, wbc vaf & read support. Based on the thresholds given in the script, it then filters the mutect results to retain the significant variants only. The script assumes that the common variants between WBC and tumor samples in mutect results have been identified. 
 
 	- `subsetted/sample_name.csv`: A csv file with information from both tnvstats and the Mutect2. It contains vaf, read support, ref and alt information about all variants identified in a sample. 
 	- `subsetted/ALL_MERGED.csv`: All mutations identified in all samples by Mutect2 before any filtering. 
 	- `subsetted/ALL_MERGED_FILTERED_0.1.csv`: All mutations identified in all samples by Mutect2 with vaf less than 10%. 
 	- `subsetted/ALL_MERGED_FILTERED_0.2.csv`: All mutations identified in all samples by Mutect2 with vaf less than 20%. 
+
+Furthermore, the script also checks whether the tnvstats and the common variants csv files exist for each sample and outputs a metrics file thatis useful for troubleshooting later, located here: `chip_project/metrics/file_situation/new_finland_download`.
 
 **`compute_vaf.R`**: The purpose of this script was to calculate the vaf variants based on samtools and Mutect2 calculations, but instead decided to use tnvstats entirely. Keeping it here in case we need to refer back to it. For now, **`get_vaf_from_tnvstats.R`** does the job instead. 
 
@@ -38,14 +39,23 @@ Scripts in this section are found in `scripts/Rscripts`. The outputs of the scri
 
 7. **`plotting.R`**: IN PROGRESS. This script plots the mutations taken from `tnvstats_mutect_compared/combined.csv` (step 5 above). It also indicates if a mutation was identified by both pipelines or by one of them only. 
 
-## Calculating coverage 
-We choose which samples to work on based on coverage. `scripts/compute_coverage/compute_coverage.sh` script computes the coverage using `samtools depth` for either all the bam files in a given directory, or in the files written down in a text file. The files should contain the full path. Low quality reads and duplicates should be removed prior to running calculating coverage, because otherwise the metrics will be inflated. The bam file list (in the form of a text file) should be located in the same place, `scripts/compute_coverage`, and it should be named `bamList_coverage.txt`. By default the script outputs coverage information to `metrics/coverage_information`. User should specify a subdirectory here for output. In the output directory, the files with the "ALL" string in the name contains the average depth computed with all the positions in the bam file, not subsetted to the 72 gene panel file.  
+## Calculating metrics
+Besides mutation calling, it's also possible to compute various metrics, such as sample coverage (used synonymously as sample depth) and the number of variants mutect identified
+
+1. **COVERAGE:** We choose which samples to work on based on coverage. `scripts/compute_coverage/compute_coverage.sh` script computes the coverage using `samtools depth` for either all the bam files in a given directory, or in the files written down in a text file. The files should contain the full path. Low quality reads and duplicates should be removed prior to running calculating coverage, because otherwise the metrics will be inflated. The bam file list (in the form of a text file) should be located in the same place, `scripts/compute_coverage`, and it should be named `bamList_coverage.txt`. By default the script outputs coverage information to `metrics/coverage_information`. User should specify a subdirectory here for output. In the output directory, the files with the "ALL" string in the name contains the average depth computed with all the positions in the bam file, not subsetted to the 72 gene panel file.  
 
 Besides calculating coverage, we also make plots to show the distribution of coverage across samples: 
-8. **`make_coverage_plots.R`**: This script makes histograms showing the distribution of coverage in wbc and tumor samples. The outputted figures are located at `figures/coverage_plots/`.
+**`make_coverage_plots.R`**: This script makes histograms showing the distribution of coverage in wbc and tumor samples. The outputted figures are located at `figures/coverage_plots/`.
+
+2. **NUMBER OF VARIANTS:** Shell script located at `chip_project/scripts/Mutect2/compute_variant_numbers.sh` calculates the number of variants Mutect2 called, after filtering for false positives. The output is a text file consisting of 2 columns where the first one is the vcf file, and the second one is the number of mutations mutect called. Usually WBC and tumor samples appear one after another on the file.
+
+The script also calculates the number of common variants found across WBC and tumor samples. As an input it uses the csv files located at `chip_project/common_variants/new_finland_download`, and the metrics are saved at `chip_project/metrics/mutect_variant_numbers/new_finland_download_COMMON`. 
 
 ## Information about bam files 
 As of July 16, the analysis encompasses three groups of data: 
 1. **ctDNA_prognosis**: Tumor samples from 72 gene targeted sequencing data 
 2. **GU_finland_download**: WBC samples from 72 gene targeted sequencing data - matches to data in step 1 
 3. **new_finland_download**: WBC and tumor samples are together in this group, containing bam files from OZM, GU, VPC, VCC, M1RP cohorts. Bam files starting with the `filtered_RG` have been filtered to remove duplicates and low quality reads. Filtered Mutect2 results for these files are located in `chip_project/mutect_results_filtered/new_finland_download`. 
+
+And these are the misc data, relating to the main 3 groups mentioned above:  
+4. **new_finland_download_UNCOMP**: Bam files here have been uncompressed after filtering and adding the readgroups. The reason was to see if computing tnvstats on uncompressed bams would be faster.
