@@ -47,6 +47,8 @@ Besides mutation calling, it's also possible to compute various metrics, such as
 Besides calculating coverage, we also make plots to show the distribution of coverage across samples: 
 **`make_coverage_plots.R`**: This script makes histograms showing the distribution of coverage in wbc and tumor samples. The outputted figures are located at `figures/coverage_plots/`.
 
+It is a good idea to add the exact coverage information for the SNVs to the sheet we curated (`curated_muts.csv`). `add_coverage_mq_info.R` does exactly that and saves a new copy of the `curated_muts.csv` file to the same location with two extra columns added for coverage and mapping quality.
+
 2. **NUMBER OF VARIANTS:** Shell script located at `chip_project/scripts/Mutect2/compute_variant_numbers.sh` calculates the number of variants Mutect2 called, after filtering for false positives. The output is a text file consisting of 2 columns where the first one is the vcf file, and the second one is the number of mutations mutect called. Usually WBC and tumor samples appear one after another on the file.
 
 The script also calculates the number of common variants found across WBC and tumor samples. As an input it uses the csv files located at `chip_project/common_variants/new_finland_download`, and the metrics are saved at `chip_project/metrics/mutect_variant_numbers/new_finland_download_COMMON`. 
@@ -59,3 +61,6 @@ As of July 16, the analysis encompasses three groups of data:
 
 And these are the misc data, relating to the main 3 groups mentioned above:  
 4. **new_finland_download_UNCOMP**: Bam files here have been uncompressed after filtering and adding the readgroups. The reason was to see if computing tnvstats on uncompressed bams would be faster.
+
+## IGV snapshots
+Taking IGV snapshots of the candidate CHIP mutatinos helps validate our findings. The snapshots scripts are located at `gene_panel_pipeline_modified/igv_scripts`, not in the `chip_project` directory. `make_igv_batch_file_general.py` is the main script that can run on various types of inputs. It creates a batch file that should be run on a linux or Windows system.
