@@ -34,31 +34,37 @@ subset_list <- function(ids_list, samples_list, str_separator){
 
 }
 
-get_sample_ids <- function(sample_type) {
+get_sample_ids <- function(sample_keyword, sample_type) {
 
 	# Super simple function that calls grep to get the sample ids, NOT PATHS. Having a function for it made it more flexible for different cohorts.
 	# These ids are sorted so that control and tumor samples match. Later on they are used to load the relevant vcf files.
-	if (sample_type == "cfDNA") {
-		path_to_bams <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/ctDNA_prognosis_ORIGINAL"
+
+	# sample_keyword is the dir name that contains the bams. options are: 
+	# ctDNA_prognosis_ORIGINAL
+	# GU_finland_download
+	# new_finland_download
+	# kidney_samples
+
+	# sample_type is either ctDNA or WBC.
+	
+	main_path_to_bams <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/" # path that stays the same regardless of the samples we work with
+	path_to_bams <- file.path(main_path_to_bams, sample_keyword)
+
+	# check later to see if these file paths are correct
+	if (sample_keyword == "ctDNA_prognosis_ORIGINAL" | sample_keyword == "GU_finland_download") { 
 		ids <- as.list(sort(grep("^[GU]", list.files(path_to_bams, pattern = ".bam$"), value = TRUE, ignore.case = TRUE))) 
 	
-	} else if (sample_type == "WBC") {
-		path_to_bams <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/GU_finland_download"
-		ids <- as.list(sort(grep("^[GU]", list.files(path_to_bams, pattern = ".bam$"), value = TRUE, ignore.case = TRUE))) 
-
-	} else if (sample_type == "new_samples_cfDNA") {
-		path_to_bams <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/new_finland_download"
+	} else if (sample_type == "ctDNA") { 
 		ids <- as.list(sort(grep("Baseline|cfDNA", list.files(path_to_bams, pattern = ".bam$"), value = TRUE, ignore.case = TRUE)))
-		to_keep <- !grepl("filtered_RG_", ids) # keep the samples that dont start with "filtered_RG_". More about why we do this at the end of the script.
-		ids <- ids[to_keep]
-
-	} else if (sample_type == "new_samples_WBC") {
-		path_to_bams <- "/groups/wyattgrp/users/amunzur/chip_project/finland_bams/new_finland_download"
+	
+	} else if (sample_type == "WBC") {
 		ids <- as.list(sort(grep("WBC", list.files(path_to_bams, pattern = ".bam$"), value = TRUE, ignore.case = TRUE)))
-		to_keep <- !grepl("filtered_RG_", ids) # keep the samples that dont start with "filtered_RG_". More about why we do this at the end of the script.
-		ids <- ids[to_keep]
 
 	} # end of if loop
+
+	# some further filtering based on sample_keyword
+	if (sample_keyword == "new_finland_download") {ids <- ids[!grepl("filtered_RG_", ids)] # if we are dealing with new_finland_download, remove the duplicated names
+	} else if (sample_keyword == "kidney_samples") {ids <- ids[grepl("^[GU]", ids)]}  
 
 	return(ids)
 
@@ -77,6 +83,7 @@ identify_vcf_files <- function(sample_type, samples_list){
 	if (sample_type == "new_samples") {path_to_vcf <- paste("/groups/wyattgrp/users/amunzur/chip_project/mutect_results_filtered/new_finland_download")}
 	if (sample_type == "cfDNA") {path_to_vcf <- paste("/groups/wyattgrp/users/amunzur/chip_project/mutect_results_filtered/ctDNA_prognosis")}
 	if (sample_type == "WBC") {path_to_vcf <- paste("/groups/wyattgrp/users/amunzur/chip_project/mutect_results_filtered/GU_finland_download")}
+	if (sample_type == "kidney_samples") {path_to_vcf <- paste("/groups/wyattgrp/users/amunzur/chip_project/mutect_results_filtered/kidney_samples")}
 	
 	vcf_list <- list() # intialize an empty list for the loop below 
 	for (sample_name in samples_list) {
@@ -145,7 +152,10 @@ find_common_variants <- function(samples_list, tumor_vcf_paths, wbc_vcf_paths, p
 
 } # end of function 
  
+####################################
 # FOR GU COHORT, OUR INITIAL SAMPLES:
+####################################
+
 # tumor_ids <- get_sample_ids("cfDNA")
 # wbc_ids <- get_sample_ids("WBC")
 
@@ -159,9 +169,43 @@ find_common_variants <- function(samples_list, tumor_vcf_paths, wbc_vcf_paths, p
 # tumor_vcf_paths <- lapply(tumor_vcf_paths, function(some_string) paste0("/groups/wyattgrp/users/amunzur/chip_project/mutect_results_filtered/ctDNA_prognosis/", some_string))
 # wbc_vcf_paths <- lapply(wbc_vcf_paths, function(some_string) paste0("/groups/wyattgrp/users/amunzur/chip_project/mutect_results_filtered/GU_finland_download/", some_string))
 
-# FOR THE NEW BATCH OF SAMPLES FROM FINLAND
-tumor_ids <- get_sample_ids("new_samples_cfDNA")
-wbc_ids <- get_sample_ids("new_samples_WBC")
+####################################
+# FOR THE NEW BATCH OF SAMPLES FROM FINLAND - new_finland_download
+####################################
+# tumor_ids <- get_sample_ids("new_samples_cfDNA") # needs to be updated with the updated get_sample_ids function
+# wbc_ids <- get_sample_ids("new_samples_WBC")
+
+# #################################### this part is just a sanity check
+# tumor_sample <- return_sample(tumor_ids, "-cfDNA|_cfDNA|-Baseline|_Baseline") # subset to make sure we have the same samples in both groups
+# wbc_sample <- return_sample(wbc_ids, "-WBC|_WBC")
+
+# if (identical(tumor_sample, wbc_sample)) {noquote("Good to go!")} else {
+#   noquote("Something is seriously wrong, working on it.")
+  
+#   samples_list <- intersect(tumor_sample, wbc_sample)
+#   noquote("FANTASTIC JOB! The ids match.")
+#     }
+
+# # subset to remove any samples that may not have both tumor and wbc samples
+# tumor_ids <- subset_list(tumor_ids, samples_list, "-cfDNA|_cfDNA|-Baseline|_Baseline")
+# wbc_ids <- subset_list(wbc_ids, samples_list, "-WBC|_WBC")
+
+# # identify the vcf files
+# tumor_vcf_paths <- as.list(identify_vcf_files("new_samples", tumor_ids))
+# wbc_vcf_paths <- as.list(identify_vcf_files("new_samples", wbc_ids))
+
+# # load vcf files, add the necessary prefix to the paths
+# find_common_variants(samples_list, 
+# 	tumor_vcf_paths, 
+# 	wbc_vcf_paths, 
+# 	path_to_common = path_to_common_variants,
+# 	save = TRUE)
+
+####################################
+# FOR THE KIDNEY SAMPLES - third batch
+####################################
+tumor_ids <- get_sample_ids("kidney_samples", "ctDNA")
+wbc_ids <- get_sample_ids("kidney_samples", "WBC")
 
 #################################### this part is just a sanity check
 tumor_sample <- return_sample(tumor_ids, "-cfDNA|_cfDNA|-Baseline|_Baseline") # subset to make sure we have the same samples in both groups
@@ -169,11 +213,9 @@ wbc_sample <- return_sample(wbc_ids, "-WBC|_WBC")
 
 if (identical(tumor_sample, wbc_sample)) {noquote("Good to go!")} else {
   noquote("Something is seriously wrong, working on it.")
-  
-  samples_list <- intersect(tumor_sample, wbc_sample)
-  noquote("FANTASTIC JOB! The ids match.")
     }
-####################################
+
+samples_list <- intersect(tumor_sample, wbc_sample)
 
 # subset to remove any samples that may not have both tumor and wbc samples
 tumor_ids <- subset_list(tumor_ids, samples_list, "-cfDNA|_cfDNA|-Baseline|_Baseline")
@@ -189,6 +231,7 @@ find_common_variants(samples_list,
 	wbc_vcf_paths, 
 	path_to_common = path_to_common_variants,
 	save = TRUE)
+
 
 proc.time() - ptm # end timer
 noquote(format(Sys.time(), "%a %b %d %X %Y"))
