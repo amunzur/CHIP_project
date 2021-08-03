@@ -20,12 +20,16 @@ conda activate variant_calling
 # option 2: run the code on the bam files given in a text file, ids only, not absolute paths.
 ###########################################
 # or can also give a list of paths to bam files to run, instead of running it on every bam file in the given dir.
-path_to_bamList="/groups/wyattgrp/users/amunzur/chip_project/scripts/Mutect2/bamList.txt"
-cd /groups/wyattgrp/users/amunzur/chip_project/finland_bams/new_finland_download # I'll fix this later but for now, we need to cd into the dir with bams, even if we use a file with bam ids.
+path_to_bamList="/groups/wyattgrp/users/amunzur/chip_project/scripts/Mutect2/realigned_kidney_samples_WBC.txt"
+cd /groups/wyattgrp/users/amunzur/chip_project/finland_bams/kidney_samples # I'll fix this later but for now, we need to cd into the dir with bams, even if we use a file with bam ids.
 
-cat $path_to_bamList | while read bam_file || [[ -n $bam_file ]];
+cat $path_to_bamList | while read bam_file;
 do
 	printf "bash ${script_dir}/run_Mutect2.sh ${bam_file} "
 	sbatch --exclude=cn[01-05] ${script_dir}/run_Mutect2.sh ${bam_file};
 done
+
+# previously i had the line like this to exlude reading the first line:
+# cat $path_to_bamList | while read bam_file || [[ -n $bam_file ]];
+
 
