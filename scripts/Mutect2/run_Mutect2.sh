@@ -10,9 +10,41 @@
 #SBATCH --error=/groups/wyattgrp/log/%j.log
 
 bam_file=$1
-output_dir="/groups/wyattgrp/users/amunzur/chip_project/mutect2_results/GU_finland_download/" # update this if it is a different sample group.
+sample_group="kidney_samples" # only update this
+
+output_dir="/groups/wyattgrp/users/amunzur/chip_project/mutect2_results/${sample_group}/"
+output_dir_filtered="/groups/wyattgrp/users/amunzur/chip_project/mutect_results_filtered/${sample_group}/"
+
+# bed_path="/groups/wyattgrp/users/echen/"
 
 mkdir -p $output_dir # make it if it doesn't exist
+
+    # picard -Xmx40g MarkDuplicates I=$bam_file O=rmdup_$bam_file M=/groups/wyattgrp/users/amunzur/chip_project/finland_bams/MarkDuplication_metrics/rmdup_$bam_file REMOVE_DUPLICATES=true
+    # picard -Xmx40g FixMateInformation I=rmdup_$bam_file O=fixed_mate_$bam_file ADD_MATE_CIGAR=true
+    # picard AddOrReplaceReadGroups \
+    # I=fixed_mate_$bam_file \
+    # O=RG_$bam_file \
+    # RGID=1 \
+    # RGLB=library \
+    # RGPL=ILLUMINA \
+    # RGPU=unit \
+    # RGSM=sample
+    # samtools view -bq 20 -F 4 "RG_$bam_file" > "filtered_RG_${bam_file}"
+    # samtools index "filtered_RG_${bam_file}"
+    # /home/amunzur/gatk-4.2.0.0/gatk Mutect2 \
+    # -R /groups/wyattgrp/users/amunzur/chip_project/references/hg38.fa \
+    # -I filtered_RG_${bam_file} \
+    # -O "${output_dir}${bam_file}_vcf.gz"
+    # /home/amunzur/gatk-4.2.0.0/gatk FilterMutectCalls \
+    # -R /groups/wyattgrp/users/amunzur/chip_project/references/hg38.fa \
+    # -V "${output_dir}${bam_file}_vcf.gz" \
+    # -O "${output_dir_filtered}${bam_file}_FILTERED_vcf"
+
+
+
+
+
+
 ########################################################################
 # mark duplicates
 if [ ! -f rmdup_$bam_file ]
@@ -22,7 +54,7 @@ then
 	printf "FIXMATE - $bam_file\n"
 	printf "*******************************\n"
 
-    picard MarkDuplicates I=$bam_file O=rmdup_$bam_file M=/groups/wyattgrp/users/amunzur/chip_project/finland_bams/MarkDuplication_metrics/rmdup_$bam_file REMOVE_DUPLICATES=true
+    picard -Xmx40g MarkDuplicates I=$bam_file O=rmdup_$bam_file M=/groups/wyattgrp/users/amunzur/chip_project/finland_bams/MarkDuplication_metrics/rmdup_$bam_file REMOVE_DUPLICATES=true
 else
     echo "rmdup bam found. Skipping."
 fi
@@ -30,7 +62,7 @@ fi
 # fixmate
 if [ ! -f fixed_mate_$bam_file ]
 then
-    picard FixMateInformation I=rmdup_$bam_file O=fixed_mate_$bam_file ADD_MATE_CIGAR=true
+    picard -Xmx40g FixMateInformation I=rmdup_$bam_file O=fixed_mate_$bam_file ADD_MATE_CIGAR=true
 else
     echo "fixmate bam found. Skipping."
 fi
@@ -81,16 +113,9 @@ then
     /home/amunzur/gatk-4.2.0.0/gatk FilterMutectCalls \
     -R /groups/wyattgrp/users/amunzur/chip_project/references/hg38.fa \
     -V "${output_dir}${bam_file}_vcf.gz" \
-    -O "${output_dir}${bam_file}_FILTERED_vcf"
+    -O "${output_dir_filtered}${bam_file}_FILTERED_vcf"
     
 else
     echo "Mutect results found. Skipping."
 fi
 ########################################################################
-
-
-
-
-
-
-
