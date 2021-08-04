@@ -91,8 +91,8 @@ am_i_good_to_go <- function(dir_to_tnvstats, dir_to_mutect_results, path_to_baml
 } # end of function
 
 
-compare_tnvstats_and_mutect <- function(dir_to_tnvstats, dir_to_mutect_results, output_path, path_to_metrics){
-  
+compare_tnvstats_and_mutect <- function(dir_to_tnvstats, dir_to_mutect_results, output_path){
+
   # Check if the merged file (mutect and tnvstats) has been computed before. If yes, skip sample.
   for (file_name in list.files(dir_to_tnvstats)) {
 
@@ -101,7 +101,7 @@ compare_tnvstats_and_mutect <- function(dir_to_tnvstats, dir_to_mutect_results, 
     path_to_mutect_results <- file.path(dir_to_mutect_results, paste0(sample_name, ".csv"))
     path_to_tnvstats <- file.path(dir_to_tnvstats, file_name, paste0(file_name, ".tnvstat"))
 
-    if (file.exists(file.path(output_path, paste0(sample_name, ".csv")))) { noquote(c("Merged already. Skipping", sample_name)) # so that we dont waste time merging files that have been merged already
+    if (file.exists(file.path(output_path, paste0(sample_name, ".csv")))) { message(c("Merged already, skipping ", sample_name)) # so that we dont waste time merging files that have been merged already
   
   } else {   # if we havent computed the merged file for the group of samples
 
@@ -110,13 +110,16 @@ compare_tnvstats_and_mutect <- function(dir_to_tnvstats, dir_to_mutect_results, 
             
       mutect <- as.data.frame(read.csv(path_to_mutect_results)) %>% select(CHROM, POS, ALT, REF)
       tnvstats <- read.delim(path_to_tnvstats)
-      if(dim(tnvstats)[1] == 0) {noquote(c("Tnvstats empty. Merge failed.", sample_name))} else {noquote(sample_name)}
-
-      merged <-inner_join(mutect, tnvstats, by=c("CHROM" = "chrom", "POS" = "pos"))
       
-      write_csv(merged, file.path(output_path, paste0(sample_name, ".csv"))) # write as csv
+      if(dim(tnvstats)[1] == 0) {message(c("Tnvstats empty, failed merge ", sample_name))
+      } else {
+        message(c("MERGING ", sample_name))
+        merged <-inner_join(mutect, tnvstats, by=c("CHROM" = "chrom", "POS" = "pos"))
+        write_csv(merged, file.path(output_path, paste0(sample_name, ".csv")))}
 
-  }  else {print(c("Tnvstats missing.", sample_name))}
+  }  else {message(c("Missing file ", sample_name))
+
+    }
         
       } 
       
@@ -124,63 +127,76 @@ compare_tnvstats_and_mutect <- function(dir_to_tnvstats, dir_to_mutect_results, 
     
   } # end of function
 
+# filter variants based on vaf, read support and indel status. 
 filter_variants <- function(myMergedData, vaf_threshold, normal_read_support, tumor_read_support, consider_indels, save){
 
-  # consider_indels need to be boolean 
-  if (consider_indels == FALSE){
-    snv_df <- subset(myMergedData, nchar(as.character(ALT)) == 1)
-
-    i <- 1 # start the counter to go through the rows 
-    toremove <- list() # we'll save the idx for removing rows later on
+  if(consider_indels == FALSE) {variant_df <- subset(myMergedData, nchar(as.character(ALT)) == 1)
+  
+  i <- 1 # start the counter to go through the rows 
+  toremove <- list() # we'll save the idx for removing rows later on
+  
+  while (i <= dim(variant_df)[1]){ # iterate through rows
     
-    while (i <= dim(snv_df)[1]){ # iterate through rows
-      
-      alt <- as.vector(snv_df[i, "ALT"]) # tumor allele, the variant we identified
-          
-      # calculate vafs
-      tumor_vaf <- as.vector(snv_df[i, paste0(alt, "AF_t")])
-      normal_vaf <- as.vector(snv_df[i, paste0(alt, "AF_n")]) # for WBC vaf, look into the same variant allele, not the basenormal.
+    alt <- as.vector(variant_df[i, "ALT"]) # tumor allele, the variant we identified
+        
+    # calculate vafs
+    tumor_vaf <- as.vector(variant_df[i, paste0(alt, "AF_t")])
+    normal_vaf <- as.vector(variant_df[i, paste0(alt, "AF_n")]) # for WBC vaf, look into the same variant allele, not the basenormal.
 
-      # calculate read support
-      tumor_rs <- as.vector(snv_df[i, paste0(alt, "_t")])
-      normal_rs <- as.vector(snv_df[i, paste0(alt, "_n")])
-      
-      if (tumor_vaf < vaf_threshold & tumor_rs >= tumor_read_support) {print(c("TUMOR:", round(tumor_vaf, 2), tumor_rs))} # print to console
-      if (normal_vaf < vaf_threshold & normal_rs >= normal_read_support) {print(c("WBC:", round(normal_vaf, 2), normal_rs))}
+    # calculate read support
+    tumor_rs <- as.vector(variant_df[i, paste0(alt, "_t")])
+    normal_rs <- as.vector(variant_df[i, paste0(alt, "_n")])
+    
+    if (tumor_vaf < vaf_threshold & tumor_rs >= tumor_read_support) {print(c("TUMOR:", round(tumor_vaf, 2), tumor_rs))} # print to console
+    if (normal_vaf < vaf_threshold & normal_rs >= normal_read_support) {print(c("WBC:", round(normal_vaf, 2), normal_rs))}
 
-      if (tumor_vaf > vaf_threshold | normal_vaf > vaf_threshold | tumor_rs < tumor_read_support | normal_rs < normal_read_support) {toremove <- append(toremove, i)} # if either one of them is higher than the threshold, add to the list of removed idx
-      
-      i <- i + 1 # check the next row
-      
-    } # end of while loop
+    if (tumor_vaf > vaf_threshold | normal_vaf > vaf_threshold | tumor_rs < tumor_read_support | normal_rs < normal_read_support) {toremove <- append(toremove, i)} # if either one of them is higher than the threshold, add to the list of removed idx
+    
+    i <- i + 1 # check the next row
 
-  } # end of main if loop
+    if (save == TRUE) {
+    filtered <- variant_df[-unlist(toremove), ]
+    write_csv(filtered, file.path(output_path, paste0("ALL_MERGED_FILTERED", vaf_threshold, ".csv")))}
+    
+  } # end of while loop
+
+  # consider indels
+  } else { 
+
+    variant_df <- subset(myMergedData, nchar(as.character(ALT)) > 1)
+    if (save == TRUE) {
+    filtered <- variant_df
+    write_csv(filtered, file.path(output_path, paste0("ALL_MERGED_FILTERED_INDEL", ".csv")))}
+
+  } # end of if loop
 
   # after going through all the rows, subset to the muts we will keep
-  if (save == TRUE) {
-
-    filtered <- snv_df[-unlist(toremove), ]
-    write_csv(filtered, file.path(output_path, paste0("ALL_MERGED_FILTERED_", vaf_threshold, ".csv")))
-
-  }
 
   return(filtered)
 
 } # end of function
 
 # running tnvstats helps exclude the genomic locations we don't want, and save the vaf information for the variants, from the tnvstats.
-metrics_df <- am_i_good_to_go(dir_to_tnvstats, dir_to_mutect_results, path_to_bamlist, path_to_metrics, extra_safe = TRUE)
+# metrics_df <- am_i_good_to_go(dir_to_tnvstats, dir_to_mutect_results, path_to_bamlist, path_to_metrics, extra_safe = TRUE)
 compare_tnvstats_and_mutect(dir_to_tnvstats, dir_to_mutect_results, output_path)
 
 # now we merge all the individual tnvstats-mutect files we wrote.
 setwd(output_path) # makes it easier to locate and upload the files
-myMergedData <- do.call(rbind, lapply(list.files(path = output_path, pattern = "^GU-"), read.csv))
+myMergedData <- do.call(rbind, lapply(list.files(path = output_path, pattern = "^GU-"), read.csv)) # pattern here allows us to merge only certain files
 write_csv(myMergedData, file.path(output_path, "ALL_MERGED.csv")) # final file with the variant information from all samples
 
 # TAKING A CLOSER LOOK AT THE MERGED DATA - identifying the variants with vafs within our range
 df <- filter_variants(myMergedData, 
-  vaf_threshold = 0.20, 
+  vaf_threshold = 0.10, 
   normal_read_support = 10,
   tumor_read_support = 8, 
   consider_indels = FALSE, 
   save = TRUE)
+
+df <- filter_variants(myMergedData, 
+  vaf_threshold = 0.10, 
+  normal_read_support = 10,
+  tumor_read_support = 8, 
+  consider_indels = TRUE, 
+  save = TRUE)
+
