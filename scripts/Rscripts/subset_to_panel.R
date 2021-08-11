@@ -14,9 +14,15 @@ path_to_df_subsetted <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted/n
 path_to_df <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted/new_finland_download/curated_muts.csv"
 path_to_df_subsetted <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted/new_finland_download/curated_muts_panel.csv"
 
+# kidney samples
+path_to_bed <- "/groups/wyattgrp/users/amunzur/chip_project/misc_files/HumanOncologyPanel_Design_Files/bed_file_capture.bed" # bed file with locations of interest
+path_to_df <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted/kidney_samples_second/curated_muts.csv"
+path_to_df_subsetted <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted/kidney_samples_second/curated_muts_panel.csv"
+
+
 subset_to_panel <- function(path_to_bed, path_to_df, path_to_df_subsetted) {
 	bed <- as.data.frame(read.delim(path_to_bed, header = FALSE))
-	names(bed) <- c("chrom", "start", "stop", "gene")
+	if (ncol(bed) == 4) {names(bed) <- c("chrom", "start", "stop", "gene")} else {names(bed) <- c("chrom", "start", "stop")}
 	df <- as.data.frame(read_csv(path_to_df))
 
 	to_keep <- list() # list of positions to remove
@@ -54,6 +60,6 @@ subset_to_panel <- function(path_to_bed, path_to_df, path_to_df_subsetted) {
 
 } # end of function
 
-subset_to_panel(path_to_bed, path_to_df, path_to_df_subsetted)
+df <- subset_to_panel(path_to_bed, path_to_df, path_to_df_subsetted)
 
 
