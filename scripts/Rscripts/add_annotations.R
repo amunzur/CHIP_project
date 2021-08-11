@@ -24,7 +24,7 @@ add_annotations <- function(path_to_curated_muts_df, dir_to_annovar, output_path
 
 		# filter annovar results based on which sample and variant we are at
 		# read in annovar results
-		annovar_df <- as.data.frame(read.delim(file.path(dir_to_annovar, paste0(some_row$SAMPLE_ID, ".bam_FILTERED_vcf.ANNOTATED.hg38_multianno.txt"))))
+		annovar_df <- as.data.frame(read.delim(file.path(dir_to_annovar, paste0(some_row$SAMPLE_ID, ".bam_vcf_FILTERED_vcf.ANNOTATED.hg38_multianno.txt"))))
 		annovar_df <- annovar_df %>% 
 			filter(Chr == some_row$CHROM, Start == some_row$POSITION) %>% # filter to keep the variant of interest
 			select(Func.refGene, Gene.refGene, ExonicFunc.refGene, AAChange.refGene, ExAC_ALL) # exonic or intronic, which gene, type of variation, which aa change, exac score
@@ -43,8 +43,8 @@ add_annotations <- function(path_to_curated_muts_df, dir_to_annovar, output_path
 
 }
 
-path_to_curated_muts_df <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted/new_finland_download/curated_muts_panel.csv" # whatever file you are working with 
-dir_to_annovar <- "/groups/wyattgrp/users/amunzur/chip_project/annovar/annovar_results/new_finland_download"
-output_path <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted/new_finland_download/curated_muts_panel_annotated.csv"
+path_to_curated_muts_df <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted/first_batch/curated_muts_panel.csv" # whatever file you are working with 
+dir_to_annovar <- "/groups/wyattgrp/users/amunzur/chip_project/annovar/annovar_results/first_batch"
+output_path <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted/first_batch/curated_muts_panel_annotated.csv"
 
-add_annotations(path_to_curated_muts_df, dir_to_annovar)
+updated_df <- add_annotations(path_to_curated_muts_df, dir_to_annovar, output_path)
