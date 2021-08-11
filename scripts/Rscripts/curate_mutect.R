@@ -1,4 +1,4 @@
-# The point of this script is to get sample names from png snapshots, manually curated, and filter the main mutext2 results file based on the names we curate 
+# The point of this script is to get sample names from png snapshots, manually curated, and filter the main mutext2 results file based on the names we curate, and remove the mutations that happened outside the panel. 
 
 library(tidyverse)
 
@@ -19,18 +19,22 @@ library(tidyverse)
 
 # SECOND BATCH OF SAMPLES 
 # FILES TO UPLOAD 
-path_to_snapshots <- "/groups/wyattgrp/users/amunzur/chip_project/snapshot/new_finland_download/mutect_0.2_curated" # dir that contains igv snapshots, after manual curation
-path_to_mutect <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted/new_finland_download/ALL_MERGED_FILTERED_0.2.csv" # file (not dir) that contains variants, after merging and filtering based on read support and vaf 
-# path_to_curated_elie <- "/groups/wyattgrp/users/echen/CHIP_project/results/curated2_bg_error_10.tsv"
-# path_to_mutect_and_elie <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted_new/MUTECT_ELIE_COMBINED.csv" # file that contains elies calls and mutect calls, output of this script
+cohort <- "kidney_samples_second"
+cohort_extra <- "kidney_samples"
+
+path_to_snapshots <- file.path("/groups/wyattgrp/users/amunzur/chip_project/snapshot", cohort, "mutect_0.2_curated")  # dir that contains igv snapshots, after manual curation
+path_to_mutect <- file.path("/groups/wyattgrp/users/amunzur/chip_project/subsetted", cohort, "ALL_MERGED_FILTERED0.2_tr4_nr2.csv") # file (not dir) that contains variants, after merging and filtering based on read support and vaf 
+# path_to_curated_elie <- file.path("/groups/wyattgrp/users/echen/CHIP_project", cohort, "variants_curated_bg_error_10.tsv")
 
 # FILES TO WRITE TO CSV 
-path_to_curated_mutect <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted/new_finland_download/curated_muts.csv" # file that will contain the curated muts, output of this script
-# path_to_both <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/both.csv"
-# path_to_mutect_only <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/mutect_only.csv"
-# path_to_mutect_only_filtered <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/mutect_only_filtered.csv"
-# path_to_tnvstats_only <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/elie_only.csv"
-# path_to_curated_combined <-"/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/combined.csv" # all muts are here, inbdicating whether they are found in only one pipeline or both
+path_to_curated_mutect <- "/groups/wyattgrp/users/amunzur/chip_project/subsetted/kidney_samples_second/curated_muts.csv" # file that will contain the curated muts based on igv, output of this script
+path_to_both <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/new_finland_download/both.csv"
+path_to_mutect_only <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/new_finland_download/mutect_only.csv"
+path_to_mutect_only_filtered <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/new_finland_download/mutect_only_filtered.csv"
+path_to_tnvstats_only <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/new_finland_download/elie_only.csv"
+path_to_curated_combined <-"/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/new_finland_download/combined.csv" # all muts are here, inbdicating whether they are found in only one pipeline or both
+path_to_mutect_and_elie <- "/groups/wyattgrp/users/amunzur/chip_project/tnvstats_mutect_compared/new_finland_download/MUTECT_ELIE_COMBINED.csv" # file that contains elies calls and mutect calls, output of this script
+
 
 cleanup_mutect_results <- function(mutect_combined){
 
@@ -79,7 +83,7 @@ cleanup_mutect_results <- function(mutect_combined){
 
 } # end of function
 
-tnvstats <- read.delim(path_to_curated_elie) # read elie's results
+tnvstats <- as.data.frame(read.delim(path_to_curated_elie)) # read elie's results
 tnvstats$WBC_ID <- lapply(as.list(as.vector(tnvstats$WBC_ID)), function(some_name) gsub("^.*?GU","GU", some_name)) # remove everything before GU so that the ids match across dfs
 
 mutect <- read.csv(path_to_mutect) # read mutect results
@@ -135,8 +139,8 @@ tnvstats_only <- inner_join(tnvstats_only, tnvstats, by = c("CHROM", "POSITION",
 tnvstats_only <- as.data.frame(apply(tnvstats_only, 2, unlist)) # we have to do this otherwise it complains while saving
 
 # drop some from mutect_only, these are likely to be wrong
-idx <- which(duplicated(mutect_only[, 1:2]))
-mutect_only_filtered <- mutect_only[-idx, ]
+# idx <- which(duplicated(mutect_only[, 1:2]))
+# mutect_only_filtered <- mutect_only[-idx, ]
 
 # write these files to csv
 write_csv(both, path_to_both)
@@ -158,6 +162,8 @@ tnvstats_only <- tnvstats_only %>%
 names(both) <- c('CHROM', 'POSITION', 'SAMPLE_ID', 'WBC_ID', 'VAF', 'WBC_VAF', 'REF', 'ALT', 'STATUS')
 names(mutect_only_filtered) <- names(both)
 names(tnvstats_only) <- names(both)
+
+names(tnvstats_only) <- names(mutect_only_filtered)
 
 combined <- rbind(both, mutect_only_filtered, tnvstats_only)
 write_csv(combined, path_to_curated_combined)
