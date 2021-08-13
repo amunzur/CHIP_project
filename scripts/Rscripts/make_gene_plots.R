@@ -1,4 +1,6 @@
 library(tidyverse)
+library(gridExtra)
+library(cowplot)
 
 	cool_theme <-
 
@@ -78,7 +80,7 @@ make_plots <- function(cohort, depth_df_path, chosen_theme, plot_title_gene, plo
 	df_vaf$label_long <- factor(df_vaf$label_long, levels = unique(df_vaf$label_long))
 
 	# 2. VAF PLOT ##############################################################
-	p_vaf <- ggplot(data = df_vaf, aes(x = VAF_value, y = label_long, color = VAF_type)) + 
+	p_vaf <- ggplot(data = df_vaf, aes(x = VAF_value, y = label_long, color = VAF_type, shape = Func.refGene)) + 
 			geom_point(size = 3) + 
 			scale_x_continuous(breaks = seq(0, 0.20, 0.02)) + 
 			geom_hline(yintercept = seq(0, length(unique(df_vaf$label_long)), 1), linetype = "dotted", color = "gray") + 
@@ -87,7 +89,8 @@ make_plots <- function(cohort, depth_df_path, chosen_theme, plot_title_gene, plo
 			ylab("") +
 			xlab("VAF") + 
 			theme_bw() + 
-			cool_theme
+			cool_theme + 
+			theme(legend.title = element_blank())
 
 	p_vaf2 <- ggplot(data = df, aes(x = VAF, y = WBC_VAF)) + 
 			geom_point(size = 1) + 
@@ -107,6 +110,8 @@ make_plots <- function(cohort, depth_df_path, chosen_theme, plot_title_gene, plo
 	df <- as.data.frame(read_csv(depth_df_path))
 	df <- gather(df, "sample_type", "depth", c("depth_cfDNA", "depth_WBC")) # from wide to long
 	df$sample_type <- ifelse(df$sample_type == "depth_cfDNA", "Tumor", "WBC")
+	df$label_long <- factor(df$label_long, levels = unique(df$label_long))
+
 
 	# plotting
 	p_coverage <- ggplot(data = df, aes(x = label_long, y = depth, fill = sample_type)) + 
@@ -119,7 +124,8 @@ make_plots <- function(cohort, depth_df_path, chosen_theme, plot_title_gene, plo
 				xlab("") + 
 				theme_bw() + 
 				cool_theme + 
-				coord_flip()
+				coord_flip() + 
+				theme(legend.title = element_blank())
 
 	# 4. SAVE THE PLOTS ##############################################################
 	cohort <- "kidney_samples"
@@ -127,26 +133,27 @@ make_plots <- function(cohort, depth_df_path, chosen_theme, plot_title_gene, plo
 	output_vaf <- file.path(fig_path_main, cohort, "vaf.pdf")
 	output_vaf2 <- file.path(fig_path_main, cohort, "vaf2.pdf")
 	output_depth <- file.path(fig_path_main, cohort, "depth.pdf")
+	combined_path <- file.path(fig_path_main, cohort, "combined.pdf")
 
-	ggsave(output_gene, p_gene, width = 10, height = 10, units = "cm")
-	ggsave(output_vaf, p_vaf, width = 10, height = 10, units = "cm")
-	ggsave(output_vaf2, p_vaf, width = 10, height = 10, units = "cm")
-	ggsave(output_depth, p_coverage, width = 10, height = 10, units = "cm")
+	ggsave(output_gene, p_gene, width = 10, height = 10, units = "in")
+	ggsave(output_vaf, p_vaf, width = 10, height = 10, units = "in")
+	ggsave(output_vaf2, p_vaf2, width = 10, height = 10, units = "in")
+	ggsave(output_depth, p_coverage, width = 10, height = 10, units = "in")
 
-} # end of function
+	# combined_title <- ggdraw() + draw_label(combined_title, fontface='bold')
+	combined_plot <- plot_grid(p_gene, p_vaf, p_vaf2, p_coverage, align = "v", nrow = 2, rel_widths = c(1/2, 1), labels = "AUTO")
+	cowplot::save_plot(combined_path, combined_plot, base_height = 18, base_width = 22)} # end of function
+
+make_plots(cohort = "kidney_samples_second", 
+			depth_df_path = "/groups/wyattgrp/users/amunzur/chip_project/metrics/coverage_information/misc_dfs/kidney_samples/make_gene_plot_df.csv", 
+			chosen_theme = cool_theme, 
+			plot_title_gene = "Genes where mutations appear in kidney samples", 
+			plot_title_vaf = "Tumor and WBC VAF in kidney samples", 
+			plot_title_depth = "Depth at SNVs",
+			# combined_title = "KIDNEY SAMPLE - MUTECT2 RESULTS",
+			fig_path_main = "/groups/wyattgrp/users/amunzur/chip_project/figures/main_figures")
 
 
-
-make_plots <- function(cohort = "kidney_samples_second", 
-						depth_df_path = "/groups/wyattgrp/users/amunzur/chip_project/metrics/coverage_information/misc_dfs/kidney_samples/make_gene_plot_df.csv", 
-						chosen_theme = cool_theme, 
-						plot_title_gene = "Genes where mutations appear in kidney samples", 
-						plot_title_vaf = "Tumor and WBC VAF in kidney samples", 
-						plot_title_depth = "Depth at SNVs", 
-						fig_path_main = "/groups/wyattgrp/users/amunzur/chip_project/figures/main_figures")
-
-
-curated_df <- gather(curated_df, "Tumor_or_normal", "Sample_name", c("SAMPLE_ID", "sample_n")) # from wide to long
 
 
 
