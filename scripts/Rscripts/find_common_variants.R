@@ -10,7 +10,7 @@ library(tidyverse)
 library(vcfR)
 
 # the path where the common variants will be saved as csv
-path_to_common_variants <- "/groups/wyattgrp/users/amunzur/chip_project/common_variants/new_finland_download/" # make sure this ends with /
+path_to_common_variants <- "/groups/wyattgrp/users/amunzur/chip_project/common_variants/kidney_samples/" # make sure this ends with /
 
 return_sample <- function(ids_list, str_separator){
 
@@ -89,7 +89,7 @@ identify_vcf_files <- function(sample_type, samples_list){
 	for (sample_name in samples_list) {
 
 		# use regex to catch files starting witht the sample id and ending with the appropriate suffix
-		if (sample_type != "new_samples") {vcf_file <- file.path(path_to_vcf, paste0(sample_name, "_vcf_FILTERED_vcf")) # initial cohort
+		if (sample_type != "new_samples" & sample_type != "kidney_samples") {vcf_file <- file.path(path_to_vcf, paste0(sample_name, "_vcf_FILTERED_vcf")) # initial cohort
 		} else { vcf_file <- file.path(path_to_vcf, paste0(sample_name, "_FILTERED_vcf")) } # second cohort
 
 		if (file.exists(vcf_file)) { vcf_list <- append(vcf_list, vcf_file) # add the file to the list if it exists
@@ -111,13 +111,13 @@ find_common_variants <- function(samples_list, tumor_vcf_paths, wbc_vcf_paths, p
 
 		if (length(tumor_path) > 0 & length(wbc_path) > 0){
 			
-			print(c("Found both files, started sample", unlist(sample)))
+			message(c("Found both files, started sample ", unlist(sample)))
 			# these are actually lists, we will extract the actual path if we can identify both the ctDNA and WBC sample
 			tumor_path <- tumor_path[[1]]
 			wbc_path <- wbc_path[[1]]
 
 			# load the vcf files 
-			print("Started loading files.")
+			message("Started loading files.")
 			tumor <- read.vcfR(tumor_path, verbose = FALSE)
 			wbc <- read.vcfR(wbc_path, verbose = FALSE)
 
@@ -126,24 +126,27 @@ find_common_variants <- function(samples_list, tumor_vcf_paths, wbc_vcf_paths, p
 			wbc <- as.data.frame(wbc@fix)[, c("CHROM",  "POS", "REF", "ALT", "FILTER")]
 
 			# remove the variants that failed
-			print("Filtering.")
+			message("Filtering.")
 			tumor <- filter(tumor, FILTER == "PASS")
 			wbc <- filter(wbc, FILTER == "PASS")
 
 			# now merge to keep the variants if they exist in both files
-			print("Merging.")
+			message("Merging.")
 			combined <- merge(tumor, wbc)
 			path_combined <- paste0(path_to_common, sample, ".csv")
 			
 			if (dim(combined)[1] != 0) {
-				print(c("Writing to csv. Found", dim(combined)[1], "common variants."))
+				message(c("Writing to csv. Found ", dim(combined)[1], " common variants."))
 				#cat(c("Writing to csv. Found", dim(combined)[1], "common variants."), , file = log_con)
-				if (save == TRUE) {write.csv(combined, path_combined)} else {"No common variants."}}
+				if (save == TRUE) {
+					write.csv(combined, path_combined)
+					message(c("Saved to ", path_combined))
+					} else {"No common variants."}}
 
-			print("\n")
+			message("\n")
 
 		} else {
-			print(c("Skipped sample:", sample))
+			message(c("Skipped sample: ", sample))
 
 		}
 		i = i + 1
@@ -222,8 +225,8 @@ tumor_ids <- subset_list(tumor_ids, samples_list, "-cfDNA|_cfDNA|-Baseline|_Base
 wbc_ids <- subset_list(wbc_ids, samples_list, "-WBC|_WBC")
 
 # identify the vcf files
-tumor_vcf_paths <- as.list(identify_vcf_files("new_samples", tumor_ids))
-wbc_vcf_paths <- as.list(identify_vcf_files("new_samples", wbc_ids))
+tumor_vcf_paths <- as.list(identify_vcf_files("kidney_samples", tumor_ids))
+wbc_vcf_paths <- as.list(identify_vcf_files("kidney_samples", wbc_ids))
 
 # load vcf files, add the necessary prefix to the paths
 find_common_variants(samples_list, 
