@@ -1,4 +1,4 @@
-# CHIP_project
+# Looking for CHIP mutations in cfDNA samples
 
 ## Sample filtering and variant calling
 Scripts located in `scripts/Mutect2` filter the bam files, run Mutect2 on them and remove the false positives using GATK's functions. The filtering consists of removing duplicates, fixing read mates, adding read groups and removing low quality reads. After running and filtering Mutect2, the nest section of R scripts clean up the results and compare the found variants to the results from other pipelines. 
@@ -53,6 +53,9 @@ It is a good idea to add the exact coverage information for the SNVs to the shee
 
 The script also calculates the number of common variants found across WBC and tumor samples. As an input it uses the csv files located at `chip_project/common_variants/new_finland_download`, and the metrics are saved at `chip_project/metrics/mutect_variant_numbers/new_finland_download_COMMON`. 
 
+## About running tnvstats on the samples 
+Tnvstats scripts aren't located in this in this project. They are run separately, but in each tnvstats directory for each batch of samples, bamlist used is found in the same place.
+
 ## Information about bam files 
 As of July 16, the analysis encompasses three groups of data: 
 1. **ctDNA_prognosis**: Tumor samples from 72 gene targeted sequencing data 
@@ -64,3 +67,85 @@ And these are the misc data, relating to the main 3 groups mentioned above:
 
 ## IGV snapshots
 Taking IGV snapshots of the candidate CHIP mutatinos helps validate our findings. The snapshots scripts are located at `gene_panel_pipeline_modified/igv_scripts`, not in the `chip_project` directory. `make_igv_batch_file_general.py` is the main script that can run on various types of inputs. It creates a batch file that should be run on a linux or Windows system.
+
+## Plotting 
+There are multiple R scripts present that generate various plots that are saved to `chip_project/figures`, as follow: 
+1. `make_mutect_plots.R`: This one generates 3 plots and outputs to `chip_project/figures/vaf_comparison/`. The plots it generates are: 
+	- Classic vaf comparison plot1: A dot plot comparing the WBC and tumor VAFs of mutations. Dots are labelled to show chromosome and position. 
+	- Classic vaf comparison plot2: A dot plot comparing the WBC and tumor VAFs of mutations. Dots are labelled to show samples. 
+	- Classic vaf comparison plot3: A dot plot, x axis has the mutations and tumor & WBC vafs are colored differently. 
+
+2. `make_coverage_plots.R`: This script plots the average coverage (depth) of samples in histograms and outputs the figures to `chip_project/figures/coverage_plots`. These plots help decide which cohorts to work with.
+
+## Running the inhouse pipeline for SNV and indel calling
+Besides running public software we also use a mutation calling software optimized for the types of data we work with. This pipeline consists of multiple scripts that need to be run in order, as explained below. All scripts are located at `chip_project/inhouse_pipeline/src`. 
+
+- `pipeline_mutation_calling_all.bash`: A bash script to call `pipeline_mutation_calling_one.bash` on each tumor-normal samples, submits individual jobs to the cluster for each pair. Creates a folder for each tumour sample and stores all files in `chip_project/inhouse_pipeline/results_kidney_samples/${name_tumor}_bg_error_${bm}/variant_intermediate_files`. This output directory can be changed. 
+
+For targeted data, use `genepanel_allchr_errorrates.txt` for background error rates. For whole exome sequencing, `hg38_wxs_allchr_18may18_errorrates.txt` should be used instead. 
+
+- `pipeline_mutation_calling_one.bash`: This one calls snvs, and then applies low complexity, read end filers, and filters out potential gemline mutations. As an input, it uses the tnvstats and the tumor - WBC bam pairs.  
+
+Process: 
+#### SNV calling
+
+1. Load BAM files and tnvstats
+2. Run `call_snv.py` to query SNVs and annotate with ANNOVAR. Outputs to `${output}_both_somatic_snv_anno_flagged.tsv`. Some important parameters are: 
+	- Upper VAF bound for a region to be classified as a germline heterzygous SNP &rightarrow; 0.8. 
+	- Min read support from tumour &rightarrow; 10 (need to adjust base on cfDNA depth, the current one is assuming ~750X or more)
+	- Min read support from WBC &rightarrow; 8 (need to adjust base on cfDNA depth, the current one is assuming ~500X or more. For kidney samples around 100X WBC, use 2 reads.)
+	- Background error rate &rightarrow; 10
+	- Min VAF &rightarrow; 1% (though some manual tweaking later is acceptable)
+	Note that in the output file, it will be specified which samples are don't have enough read depth so we can go back and make our best judegement of including it or not. 
+
+3. Apply low complexity filter on SNVs by calling `lowcomplex_filter_snv.py`. Outputs to `${output}_snv_lcf.tsv`.
+4. Apply read end filter on SNVs by calling `read_end_filter_snv.py`. Outputs to `${output}_snv_lcf_re.tsv`.
+5. Further filtering to   
+	- Remove potential germline mutations based on database search (ExAC, and anything above 30% VAF).
+	- Remove positions called in more than 2 samples.
+	- Ensure VAF in WBC and cfDNA differ from each other by more than 5%.
+	Outputs to `${output}_snv_lcf_re_pgf.tsv`.
+
+#### Indel calling
+
+6. Run `call_indel.py` to query INDELS and annotate with ANNOVAR. Outputs to `${output}_somatic_anno_indel.tsv`.
+7. Apply low complexity filter on INDELS by calling `lowcomplex_filter_indel.py`. Outputs to: `${output}_indel_lcf.tsv`.
+8. Further filtering to   
+	- Remove potential germline mutations based on database search (ExAC, and anything above 30% VAF).
+	- Remove positions called in more than 2 samples.
+	- Ensure VAF in WBC and cfDNA differ from each other by more than 5%.
+	Outputs to `${output}_indel_lcf_pgf.tsv`.
+
+##### Abbreviations
+- lcf: low complexity filter
+- re: read end filter
+- pgf: potential germline filter
+
+#### Tabulating the output 
+9. Loop through all samples and tabulate `${output}_snv_lcf_re_pgf.tsv` and `${output}_indel_lcf_pgf.tsv` to subset to genes of interest: ATM, AXSL1, TP53, BRCA2, BRCA1, RUNX1, GNAS, KMT2C (this is for the PCa panel) and restrict to coding variants that are more likely to be functional.
+
+`Combine_CHIP_muts.py` for SNV  
+`Combine_CHIP_indels.py` for INDELs
+
+10. Take IGV snapshots and manuall curate variants. 
+11. Produce visualizations:
+	- WBC VAF and cfDNA VAF scatter plot
+	- Per gene bar plot
+	- `Combine_first_second_results.py`: WBC and cfDNA per mutation VAF scatter plot combined with bar plot showing read depth at the mut or combined with bar plot showing tumor content estimate.
+
+### Result interpretation:
+- WBC and tumor VAFs should follow the `y = x` line where they are rougly equal.
+- Mutations should be in the coding region.
+- Can cross reference the data on cBioportal. Two datasets of interest are "curated set of non-redundant studies" and "Cancer Therapy and Clonal Hematopoiesis (MSK, Nat Gent 2020)"" to see if the mutations called are recorded as potential oncogenetic in the literature.
+- Other mutation functional predictor software includes polyfen and sift.
+
+### TODOs
+1. Run the bladder samples as Alex suggested
+2. Call cfDNA muts of our PCa samples by running in house pipeline then run TC estimate script get a rough estimate of TC.
+3. The read end filter is not working right now since we don't take into account of small indels' impact on read position. 
+
+
+
+ 
+
+
